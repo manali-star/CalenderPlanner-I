@@ -46,6 +46,8 @@ npm run build
 
 The generated static files are written to `dist/` and can be deployed to Netlify, Vercel, Cloudflare Pages, Firebase Hosting, or any static host.
 
+For Vercel, this project includes `vercel.json` so client-side routes such as `/dashboard` and `/activities` are rewritten to `index.html` instead of returning `404`.
+
 ## Environment variables
 
 - `VITE_SUPABASE_URL`
