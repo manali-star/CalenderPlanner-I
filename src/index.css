@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* PREMIUM MODAL SCROLLBAR */
+
+.custom-scrollbar::-webkit-scrollbar {
+
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+
+  background: linear-gradient(
+    to bottom,
+    rgba(239,68,68,0.4),
+    rgba(236,72,153,0.4)
+  );
+
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+
+  background: linear-gradient(
+    to bottom,
+    rgba(239,68,68,0.7),
+    rgba(236,72,153,0.7)
+  );
+}
+
+/* =========================================================
+   ULTRA PREMIUM OPERATIONS CALENDAR
+========================================================= */
+
+.rbc-calendar {
+  background: transparent !important;
+  color: white !important;
+  font-family: inherit;
+}
+
+/* REMOVE DEFAULT TOOLBAR */
+
+.rbc-toolbar {
+  display: none !important;
+}
+
+/* MAIN GRID */
+
+.rbc-month-view {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* WEEK HEADER */
+
+.rbc-header {
+  border: none !important;
+
+  background: transparent !important;
+
+  padding: 18px 0 !important;
+
+  color: #67e8f9 !important;
+
+  font-size: 14px !important;
+
+  font-weight: 800 !important;
+
+  letter-spacing: 0.08em;
+}
+
+/* MONTH ROW */
+
+.rbc-month-row {
+
+  min-height: 170px !important;
+
+  border: none !important;
+
+  overflow: hidden !important;
+}
+
+/* DAY CELL */
+
+.rbc-day-bg {
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,0.015),
+      rgba(255,255,255,0.01)
+    ) !important;
+
+  border:
+    1px solid rgba(255,255,255,0.04) !important;
+
+  transition:
+    all 0.35s ease;
+}
+
+/* HOVER */
+
+.rbc-day-bg:hover {
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(34,211,238,0.08),
+      rgba(59,130,246,0.05)
+    ) !important;
+
+  box-shadow:
+    inset 0 0 50px rgba(34,211,238,0.08);
+}
+
+/* TODAY */
+
+.rbc-today {
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(34,211,238,0.12),
+      rgba(59,130,246,0.08)
+    ) !important;
+}
+
+/* DATE NUMBER */
+
+.rbc-date-cell {
+
+  padding: 14px !important;
+
+  color: white !important;
+
+  font-weight: 800 !important;
+
+  font-size: 15px !important;
+}
+
+/* EVENT SPACING */
+
+.rbc-row-segment {
+
+  padding:
+    6px
+    8px !important;
+}
+
+/* EVENT RESET */
+
+.rbc-event {
+
+  background:
+    transparent !important;
+
+  border:
+    none !important;
+
+  overflow:
+    visible !important;
+}
+
+/* EVENT CONTENT */
+
+.rbc-event-content {
+
+  overflow:
+    visible !important;
+}
+
+/* HIDE LABEL */
+
+.rbc-event-label {
+
+  display:
+    none !important;
+}
+
+/* OFF RANGE */
+
+.rbc-off-range-bg {
+
+  background:
+    rgba(255,255,255,0.02) !important;
+}
+
+/* REMOVE UGLY BLUE LINE */
+
+.rbc-current-time-indicator {
+
+  display:
+    none !important;
+}
+
+/* EVENTS CONTAINER */
+
+.rbc-events-container {
+
+  width:
+    100% !important;
+}
+
+/* ROW CONTENT */
+
+.rbc-row-content {
+
+  z-index:
+    20 !important;
+}
+
+.text-pink-300 { color: #f9a8d4; }
+.text-green-300 { color: #86efac; }
+.bg-pink-500\/10 { background-color: rgba(236, 72, 153, 0.1); }
+.bg-green-500\/10 { background-color: rgba(34, 197, 94, 0.1); }
+
+/* Hide scrollbar */
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* IE */
+* {
+  -ms-overflow-style: none;
+}
+
+select {
+  background-color: #0B1120;
+  color: white;
+}
+
+select option {
+  background-color: #0B1120;
+  color: white;
+}
