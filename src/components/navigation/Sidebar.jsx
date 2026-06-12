@@ -9,7 +9,6 @@ import {
   Activity,
   LogOut,
   UserCircle2,
-  Crown,
   Bell,
   Users,
   CalendarDays,
@@ -41,15 +40,9 @@ const menuItems = [
   { title: "College Management", icon: Building2, path: "/college-management", roles: ["admin"] },
   { title: "Analytics", icon: BarChart3, path: "/analytics", roles: ["admin", "college_coordinator", "officer", "warrior"] },
   { title: "Reports", icon: FileText, path: "/reports", roles: ["admin", "college_coordinator", "officer", "warrior"] },
-  {
-  title: "Admin Panel",
-  icon: Crown,
-  path: "/admin",
-  roles: ["admin", "college_coordinator", "officer"]
-},
 {
   title: "Planner System",
-  icon: Crown,
+  icon: Building2,
   path: "/admin/planners",
   roles: ["admin"]
 },

@@ -15,10 +15,19 @@ import {
 import AddActivityModal from "../../components/modals/AddActivityModal";
 import { supabase } from "../../lib/supabase";
 
+const OFFICER_PASSWORDS = {
+  secretary: "secretary123",
+  activity: "activity123",
+  media: "media123",
+  president: "president123",
+};
+
+const PROOF_REQUIREMENTS_TEXT =
+  "Include clear event proof, visible date or venue details when possible, supporting notes or links, and the final student reach or impact summary.";
+
 function TasksPage() {
   const [profile, setProfile] = useState(null);
   const [tasks, setTasks] = useState([]);
-  const [proofFile, setProofFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -111,20 +120,18 @@ if (activeProfile?.role?.toLowerCase() === "warrior") {
       .eq("user_id", activeProfile.id)
       .maybeSingle();
 
-  // SHOW:
-  // individual tasks
-  // OR team tasks
   if (warriorTeam) {
 
-    query = query.or(
-      `assigned_to.eq.${activeProfile.id},assigned_team_id.eq.${warriorTeam.team_id}`
+    query = query.eq(
+      "assigned_team_id",
+      warriorTeam.team_id
     );
 
   } else {
 
-    query = query.eq(
-      "assigned_to",
-      activeProfile.id
+    query = query.is(
+      "assigned_team_id",
+      null
     );
 
   }
@@ -337,6 +344,7 @@ updatedTasks.forEach((task) => {
             profile={profile}
             refresh={fetchActivities}
             fetchActivities={fetchActivities}
+            setTasks={setTasks}
           />
         ))}
       </div>
@@ -371,16 +379,6 @@ const resolveCollegeId = async (activity) => {
     return teamData?.college_id || null;
   }
 
-  if (activity.assignment_type === "individual" && activity.assigned_to) {
-    const { data: assignedProfile } = await supabase
-      .from("profiles")
-      .select("college_id")
-      .eq("id", activity.assigned_to)
-      .maybeSingle();
-
-    return assignedProfile?.college_id || null;
-  }
-
   return null;
 };
 
@@ -398,11 +396,10 @@ const activityPayload = await Promise.all(
       target_students: Number(activity.target_students) || 0,
       description: activity.description,
       priority: activity.priority || "medium",
-      assignment_type: activity.assignment_type,
-      assigned_to:
-        activity.assignment_type === "individual" ? activity.assigned_to : null,
+      assignment_type: "team",
+      assigned_to: null,
       assigned_team_id:
-        activity.assignment_type === "team" ? activity.assigned_team_id : null,
+        activity.assigned_team_id || null,
       assigned_college_id: resolvedCollegeId,
       created_by: user.id,
       status: "planned",
@@ -474,15 +471,19 @@ function StatBox({ icon, label, value, color }) {
   );
 }
 
-function ActivityCard({ activity, index, profile, refresh, fetchActivities }) {
+function ActivityCard({
+  activity,
+  index,
+  profile,
+  refresh,
+  fetchActivities,
+  setTasks,
+}) {
   const isOfficer = [
     "officer",
     "president",
     "college_coordinator",
   ].includes(profile?.role?.toLowerCase());
-
-  const needsReview =
-  activity.needs_review;
 
   const isWarrior =
     profile?.role?.toLowerCase() === "warrior";
@@ -496,7 +497,26 @@ function ActivityCard({ activity, index, profile, refresh, fetchActivities }) {
     const [proofFile, setProofFile] =
       useState(null);
 
+    const [massRemarks, setMassRemarks] =
+      useState(activity.remarks || "");
+
+    const [massAudienceCount, setMassAudienceCount] =
+      useState(activity.audience_count || "");
+
 const handleApprove = async (role) => {
+  const expectedPassword =
+    OFFICER_PASSWORDS[role];
+
+  if (expectedPassword) {
+    const enteredPassword = prompt(
+      `Enter ${role[0].toUpperCase()}${role.slice(1)} Password`
+    );
+
+    if (enteredPassword !== expectedPassword) {
+      toast.error("Wrong Password");
+      return;
+    }
+  }
 
   let updates = {};
 
@@ -505,6 +525,7 @@ const handleApprove = async (role) => {
 
     updates = {
       secretary_approved: true,
+      secretary_status: "approved",
     };
 
   }
@@ -514,6 +535,7 @@ const handleApprove = async (role) => {
 
     updates = {
       activity_approved: true,
+      activity_status: "approved",
     };
 
   }
@@ -523,6 +545,7 @@ const handleApprove = async (role) => {
 
     updates = {
       media_approved: true,
+      media_status: "approved",
     };
 
   }
@@ -571,10 +594,13 @@ const handleReject = async (
       rejected_by: role,
 
       secretary_approved: false,
+      secretary_status: "pending",
 
       activity_approved: false,
+      activity_status: "pending",
 
       media_approved: false,
+      media_status: "pending",
 
       president_approved: false,
 
@@ -599,17 +625,23 @@ const handleReject = async (
   const workflow = [
     {
       label: "Secretary",
-      value: activity.secretary_status,
+      value: activity.secretary_approved
+        ? "approved"
+        : "pending",
     },
 
     {
       label: "Activity",
-      value: activity.activity_status,
+      value: activity.activity_approved
+        ? "approved"
+        : "pending",
     },
 
     {
       label: "Media",
-      value: activity.media_status,
+      value: activity.media_approved
+        ? "approved"
+        : "pending",
     },
 
     {
@@ -618,9 +650,9 @@ const handleReject = async (
   value:
     activity.president_approved
       ? "approved"
-      : activity.secretary_status === "approved" &&
-        activity.activity_status === "approved" &&
-        activity.media_status === "approved"
+      : activity.secretary_approved &&
+        activity.activity_approved &&
+        activity.media_approved
       ? "ready"
       : "locked",
 },
@@ -1101,23 +1133,8 @@ const handleReject = async (
 
         <div className="flex gap-3">
 
-          <button
-            onClick={() => {
-
-  const password = prompt(
-    "Enter President Password"
-  );
-
-  if (password !== "president123") {
-
-    toast.error("Wrong Password");
-    return;
-
-  }
-
-  handleApprove("president");
-
-}}
+      <button
+            onClick={() => handleApprove("president")}
             className="px-5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold"
           >
             Approve
@@ -1244,10 +1261,13 @@ if (!reason) return;
                   coordinator_feedback: reason,
 
                   secretary_approved: false,
+                  secretary_status: "pending",
 
                   activity_approved: false,
+                  activity_status: "pending",
 
                   media_approved: false,
+                  media_status: "pending",
 
                   president_approved: false,
 
@@ -1302,6 +1322,15 @@ if (!reason) return;
             <h3 className="text-lg font-black mb-3">
               Upload Completion Proof
             </h3>
+
+            <div className="mb-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-cyan-300 font-black mb-2">
+                Proof Requirements
+              </p>
+              <p className="text-sm text-gray-300">
+                {PROOF_REQUIREMENTS_TEXT}
+              </p>
+            </div>
 
             <label className="block cursor-pointer">
 
@@ -1574,8 +1603,9 @@ const { error: uploadError } =
       <textarea
         placeholder="Enter Final Campaign Notes"
 
+        value={massRemarks}
         onChange={(e) => {
-          activity.remarks = e.target.value;
+          setMassRemarks(e.target.value);
         }}
 
         className="
@@ -1595,13 +1625,11 @@ const { error: uploadError } =
         type="number"
         placeholder="Enter Final Outreach"
 
-        defaultValue={
-          activity.audience_count || ""
-        }
-
+        value={massAudienceCount}
         onChange={(e) => {
-          activity.audience_count =
-            e.target.value;
+          setMassAudienceCount(
+            e.target.value
+          );
         }}
 
         className="
@@ -1666,11 +1694,11 @@ const { error: uploadError } =
 
                 audience_count:
                   Number(
-                    activity.audience_count
+                    massAudienceCount
                   ) || 0,
 
                 remarks:
-                  activity.remarks || "",
+                  massRemarks || "",
 
                 coordinator_approved:
                   true,

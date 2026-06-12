@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -32,6 +32,7 @@ function AnalyticsPage() {
 
   const [warriors, setWarriors] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [colleges, setColleges] = useState([]);
 
   // =========================
   // FETCH ANALYTICS
@@ -144,6 +145,25 @@ if (teamsData) {
 
 }
 
+const {
+  data: collegesData,
+} = await supabase
+  .from("colleges")
+  .select("*")
+  .order("name");
+
+if (collegesData) {
+  setColleges(
+    activeProfile?.role === "admin"
+      ? collegesData
+      : collegesData.filter(
+          (college) =>
+            college.id ===
+            activeProfile?.college_id
+        )
+  );
+}
+
 setLoading(false);
 
   };
@@ -242,6 +262,44 @@ setLoading(false);
     };
 
   }, [activities, warriors, teams]);
+
+  const collegeWiseAnalytics = useMemo(() => {
+    return colleges.map((college) => {
+      const collegeTasks = activities.filter(
+        (activity) =>
+          activity.assigned_college_id ===
+          college.id
+      );
+
+      const completed = collegeTasks.filter(
+        (activity) =>
+          activity.status === "approved" ||
+          activity.status === "completed"
+      ).length;
+
+      const outreach = collegeTasks.reduce(
+        (sum, activity) =>
+          sum + (activity.audience_count || 0),
+        0
+      );
+
+      return {
+        id: college.id,
+        name: college.name,
+        total: collegeTasks.length,
+        completed,
+        outreach,
+        completionRate:
+          collegeTasks.length === 0
+            ? 0
+            : Math.round(
+                (completed /
+                  collegeTasks.length) *
+                  100
+              ),
+      };
+    });
+  }, [activities, colleges]);
 
   // =========================
   // PIE CHART
@@ -643,6 +701,81 @@ weeklyReport.forEach((week) => {
 
         </div>
 
+      </motion.div>
+
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 20
+        }}
+        animate={{
+          opacity: 1,
+          y: 0
+        }}
+        className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8"
+      >
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              College-wise Analytics
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Overall totals with per-college performance breakdown.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          {collegeWiseAnalytics.map((college) => (
+            <div
+              key={college.id}
+              className="rounded-2xl border border-white/10 bg-black/20 p-5"
+            >
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-xl font-black text-white">
+                    {college.name}
+                  </h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {college.completed} completed of {college.total} tasks
+                  </p>
+                </div>
+                <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-300">
+                  {college.completionRate}% complete
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Total
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-white">
+                    {college.total}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Done
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-emerald-400">
+                    {college.completed}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Reach
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-cyan-400">
+                    {college.outreach}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
       {/* WEEKLY REPORT TABLE */}

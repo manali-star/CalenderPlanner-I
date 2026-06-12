@@ -23,8 +23,6 @@ import TeamsPage from "./pages/activities/TeamsPage";
 
 import PlannerPage from "./pages/admin/PlannerPage";
 
-import AdminPage from "./pages/admin/AdminPage";
-
 import AnalyticsPage from "./pages/analytics/AnalyticsPage";
 
 import ReportsPage from "./pages/reports/ReportsPage";
@@ -467,19 +465,6 @@ if (
             }
           />
 
-          {/* ================= ADMIN PANEL ================= */}
-
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute
-                profile={profile}
-                allowedRoles={["admin", "college_coordinator", "officer"]}
-              >
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
           <Route
             path="/calendar"
             element={<CalendarPage />}

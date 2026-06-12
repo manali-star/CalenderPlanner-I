@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -9,1266 +8,314 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-
 import { supabase } from "../../lib/supabase";
+import { generateAnalytics } from "../../utils/analyticsEngine";
 
-  import { generateAnalytics, } from "../../utils/analyticsEngine";
-
-function ExecutiveReportsPage({
-  profile,
-}) {
-
-  const [
-    tasks,
-    setTasks,
-  ] = useState([]);
-
-  const [
-    teams,
-    setTeams,
-  ] = useState([]);
-
-  const [
-    colleges,
-    setColleges,
-  ] = useState([]);
-
-  const [
-    selectedCollege,
-    setSelectedCollege,
-  ] = useState("all");
-
-  const [
-    activeTab,
-    setActiveTab,
-  ] = useState("execution");
+function ExecutiveReportsPage({ profile }) {
+  const [tasks, setTasks] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [colleges, setColleges] = useState([]);
+  const [selectedCollege, setSelectedCollege] = useState("all");
+  const [activeTab, setActiveTab] = useState("execution");
 
   useEffect(() => {
+    const fetchData = async () => {
+      let taskQuery = supabase.from("tasks").select("*");
+      let teamQuery = supabase.from("teams").select("*");
 
-    fetchData();
-
-  }, []);
-
-  const fetchData =
-    async () => {
-      // TASKS
-
-      let taskQuery =
-        supabase
-          .from("tasks")
-          .select("*");
-
-      if (
-        profile?.role !== "admin"
-      ) {
-
-        taskQuery =
-          taskQuery.eq(
-            "assigned_college_id",
-            profile?.college_id
-          );
-
+      if (profile?.role !== "admin") {
+        taskQuery = taskQuery.eq("assigned_college_id", profile?.college_id);
+        teamQuery = teamQuery.eq("college_id", profile?.college_id);
       }
 
-      const {
-        data: taskData,
-      } = await taskQuery;
-
-      // TEAMS
-
-      let teamQuery =
-        supabase
-          .from("teams")
-          .select("*");
-
-      if (
-        profile?.role !== "admin"
-      ) {
-
-        teamQuery =
-          teamQuery.eq(
-            "college_id",
-            profile?.college_id
-          );
-
-      }
-
-      const {
-        data: teamData,
-      } = await teamQuery;
-
-      // COLLEGES
-
-      const {
-        data: collegeData,
-      } = await supabase
-
-        .from("colleges")
-
-        .select("*")
-
-        .order("name");
+      const [{ data: taskData }, { data: teamData }, { data: collegeData }] =
+        await Promise.all([
+          taskQuery,
+          teamQuery,
+          supabase.from("colleges").select("*").order("name"),
+        ]);
 
       setTasks(taskData || []);
-
       setTeams(teamData || []);
-
-      setColleges(
-        collegeData || []
-      );
-
+      setColleges(collegeData || []);
     };
 
-  // FILTERED TASKS
+    fetchData();
+  }, [profile?.college_id, profile?.role]);
 
-  const filteredTasks =
-
-    profile?.role ===
-    "college_coordinator"
-
-      ? tasks.filter(
-          (task) =>
-            task.assigned_college_id ===
-            profile?.college_id
-        )
-
-      : selectedCollege ===
-        "all"
-
-      ? tasks
-
-      : tasks.filter(
-          (task) =>
-            task.assigned_college_id ===
-            selectedCollege
-        );
-
-  // KPI DATAconst analytics =
-  generateAnalytics({
-
-    tasks: filteredTasks,
-
-    teams,
-
-    colleges,
-
-  });
-
-const totalActivities =
-  analytics.totalTasks;
-
-const completedActivities =
-  analytics.totalCompleted;
-
-const totalStudents =
-  analytics.totalOutreach;
-
-const presentationCount =
-  analytics.totalPresentations;
-
-const impactActivities =
-  analytics.totalImpactActivities;
-
-const weeklyData =
-  analytics.weeklyData;
-
-const teamAnalytics =
-  analytics.teamAnalytics;
-
-const collegeAnalytics =
-  analytics.collegeAnalytics;
-
-const weeklyData =
-  weeks.map((week) => {
-
-    const weekTasks =
-      filteredTasks.filter(
-        (task) => {
-
-          if (
-            task.status !==
-            "completed"
-          ) {
-            return false;
-          }
-
-          if (
-            !task.activity_date
-          ) {
-            return false;
-          }
-
-          return (
-
-            task.activity_date >=
-              week.start &&
-
-            task.activity_date <=
-              week.end
-
-          );
-
-        }
+  const filteredTasks = useMemo(() => {
+    if (profile?.role === "college_coordinator") {
+      return tasks.filter(
+        (task) => task.assigned_college_id === profile?.college_id
       );
-
-    const presentations =
-      weekTasks.filter(
-        (task) =>
-          task.activity_type
-            ?.toLowerCase() ===
-          "presentation"
-      );
-
-    const impact =
-      weekTasks.filter(
-        (task) =>
-          task.activity_type
-            ?.toLowerCase() ===
-          "impact activity"
-      );
-
-    const outreach =
-      weekTasks.reduce(
-        (sum, task) =>
-          sum +
-          (
-            task.audience_count ||
-            0
-          ),
-        0
-      );
-
-    return {
-
-      week: week.name,
-
-      presentations:
-        presentations.length,
-
-      impact:
-        impact.length,
-
-      outreach,
-
-      completed:
-        weekTasks.length,
-
-    };
-
-  });
-
-  return (
-
-    <div className="
-      min-h-screen
-      bg-[#081120]
-      text-white
-      p-6
-    ">
-
-      {/* HEADER */}
-
-      <div className="
-        flex
-        flex-col
-        lg:flex-row
-        lg:items-center
-        lg:justify-between
-        gap-6
-        mb-10
-      ">
-
-        <div>
-
-          <h1 className="
-            text-5xl
-            font-black
-          ">
-            Executive Reports
-          </h1>
-
-          <p className="
-            text-gray-400
-            mt-2
-          ">
-            Cyber Shiksha for
-            Cyber Suraksha
-          </p>
-
-        </div>
-
-        {/* FILTERS */}
-
-        <div className="
-          flex
-          items-center
-          gap-4
-        ">
-
-          {profile?.role ===
-            "admin" && (
-
-            <select
-
-              value={
-                selectedCollege
-              }
-
-              onChange={(e) =>
-                setSelectedCollege(
-                  e.target.value
-                )
-              }
-
-              className="
-                px-5
-                py-3
-                rounded-2xl
-                bg-white/5
-                border
-                border-cyan-500/20
-                outline-none
-              "
-            >
-
-              <option value="all">
-                All Colleges
-              </option>
-
-              {colleges.map(
-                (college) => (
-
-                  <option
-                    key={college.id}
-                    value={college.id}
-                  >
-                    {college.name}
-                  </option>
-
-                )
-              )}
-
-            </select>
-
-          )}
-
-        </div>
-
-      </div>
-
-      {/* TABS */}
-
-      <div className="
-        flex
-        gap-4
-        mb-8
-        overflow-x-auto
-      ">
-
-        {[
-          "execution",
-          "weekly",
-          "groups",
-        ].map((tab) => (
-
-          <button
-
-            key={tab}
-
-            onClick={() =>
-              setActiveTab(tab)
-            }
-
-            className={`
-              px-5
-              py-3
-              rounded-2xl
-              font-bold
-              whitespace-nowrap
-
-              ${
-                activeTab === tab
-                  ? "bg-cyan-500 text-black"
-                  : "bg-white/5"
-              }
-            `}
-          >
-
-            {tab.toUpperCase()}
-
-          </button>
-
-        ))}
-
-      </div>
-
-      {/* KPI CARDS */}
-
-      <div className="
-        grid
-        grid-cols-1
-        md:grid-cols-2
-        xl:grid-cols-4
-        gap-6
-        mb-10
-      ">
-
-        <div className="
-          rounded-3xl
-          bg-cyan-500/10
-          border
-          border-cyan-500/20
-          p-6
-        ">
-
-          <p className="
-            text-cyan-300
-          ">
-            Total Activities
-          </p>
-
-          <h2 className="
-            text-5xl
-            font-black
-            mt-2
-          ">
-            {totalActivities}
-          </h2>
-
-        </div>
-
-        <div className="
-          rounded-3xl
-          bg-green-500/10
-          border
-          border-green-500/20
-          p-6
-        ">
-
-          <p className="
-            text-green-300
-          ">
-            Completed
-          </p>
-
-          <h2 className="
-            text-5xl
-            font-black
-            mt-2
-          ">
-            {
-              completedActivities
-            }
-          </h2>
-
-        </div>
-
-        <div className="
-          rounded-3xl
-          bg-yellow-500/10
-          border
-          border-yellow-500/20
-          p-6
-        ">
-
-          <p className="
-            text-yellow-300
-          ">
-            Presentations
-          </p>
-
-          <h2 className="
-            text-5xl
-            font-black
-            mt-2
-          ">
-            {
-              presentationCount
-            }
-          </h2>
-
-        </div>
-
-        <div className="
-          rounded-3xl
-          bg-pink-500/10
-          border
-          border-pink-500/20
-          p-6
-        ">
-
-          <p className="
-            text-pink-300
-          ">
-            Students Reached
-          </p>
-
-          <h2 className="
-            text-5xl
-            font-black
-            mt-2
-          ">
-            {totalStudents}
-          </h2>
-
-        </div>
-
-      </div>
-
-      {/* EXECUTION TAB */}
-
-      {activeTab ===
-        "execution" && (
-
-        <div className="
-          rounded-3xl
-          bg-white/5
-          border
-          border-white/10
-          p-6
-        ">
-
-          <h2 className="
-            text-3xl
-            font-black
-            mb-6
-          ">
-            Execution Overview
-          </h2>
-
-          <div className="
-            h-[450px]
-          ">
-
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-            >
-
-              <BarChart
-                data={[
-                  {
-                    name:
-                      "Activities",
-
-                    total:
-                      totalActivities,
-
-                    completed:
-                      completedActivities,
-                  },
-
-                  {
-                    name:
-                      "Impact",
-
-                    total:
-                      impactActivities,
-
-                    completed:
-                      impactActivities,
-                  },
-
-                  {
-                    name:
-                      "Presentations",
-
-                    total:
-                      presentationCount,
-
-                    completed:
-                      presentationCount,
-                  },
-                ]}
-              >
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#1f2937"
-                />
-
-                <XAxis
-                  dataKey="name"
-                  stroke="#9ca3af"
-                />
-
-                <YAxis
-                  stroke="#9ca3af"
-                />
-
-                <Tooltip />
-
-                <Bar
-                  dataKey="total"
-                  fill="#06b6d4"
-                  radius={[
-                    8,
-                    8,
-                    0,
-                    0,
-                  ]}
-                />
-
-                <Bar
-                  dataKey="completed"
-                  fill="#22c55e"
-                  radius={[
-                    8,
-                    8,
-                    0,
-                    0,
-                  ]}
-                />
-
-              </BarChart>
-
-            </ResponsiveContainer>
-
-          </div>
-
-                  </div>
-
-      )}
-
-      {/* WEEKLY TAB */}
-
-{activeTab ===
-  "weekly" && (
-
-  <div className="
-    rounded-3xl
-    bg-white/5
-    border
-    border-white/10
-    p-6
-  ">
-
-    <h2 className="
-      text-3xl
-      font-black
-      mb-8
-    ">
-      Weekly Intelligence Report
-    </h2>
-
-    <div className="
-      overflow-x-auto
-    ">
-
-      <table className="
-        w-full
-      ">
-
-        <thead>
-
-          <tr className="
-            border-b
-            border-white/10
-            text-left
-          ">
-
-            <th className="pb-4">
-              Week
-            </th>
-
-            <th className="pb-4">
-              Presentations
-            </th>
-
-            <th className="pb-4">
-              Impact Activities
-            </th>
-
-            <th className="pb-4">
-              Outreach
-            </th>
-
-            <th className="pb-4">
-              Status
-            </th>
-
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          {weeklyData.map(
-            (week) => (
-
-              <tr
-
-                key={week.week}
-
-                className="
-                  border-b
-                  border-white/5
-                "
-              >
-
-                <td className="
-                  py-5
-                  font-bold
-                  text-cyan-400
-                ">
-                  {week.week}
-                </td>
-
-                <td className="
-                  py-5
-                ">
-                  {
-                    week.presentations
-                  }
-                </td>
-
-                <td className="
-                  py-5
-                ">
-                  {week.impact}
-                </td>
-
-                <td className="
-                  py-5
-                ">
-                  {week.outreach}
-                </td>
-
-                <td className="
-                  py-5
-                ">
-
-                  <span className={`
-                    px-3
-                    py-1
-                    rounded-full
-                    text-xs
-                    font-bold
-
-                    ${
-                      week.completed >= 5
-                        ? "bg-green-500/20 text-green-400"
-                        : week.completed >= 2
-                        ? "bg-yellow-500/20 text-yellow-400"
-                        : "bg-red-500/20 text-red-400"
-                    }
-                  `}>
-
-                    {
-                      week.completed >= 5
-                        ? "STRONG"
-                        : week.completed >= 2
-                        ? "AVERAGE"
-                        : "LOW"
-                    }
-
-                  </span>
-
-                </td>
-
-              </tr>
-
-            )
-          )}
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-
-)}
-
-{/* GROUPS TAB */}
-
-{activeTab ===
-  "groups" && (
-
-  <div className="
-    rounded-3xl
-    bg-white/5
-    border
-    border-white/10
-    p-6
-  ">
-
-    <h2 className="
-      text-3xl
-      font-black
-      mb-8
-    ">
-      Group Performance Intelligence
-    </h2>
-
-    <div className="
-      space-y-5
-    ">
-
-      {teams
-
-        .filter((team) =>
-          filteredTasks.some(
-            (task) =>
-              task.team_id ===
-              team.id
-          )
-        )
-
-        .map((team) => {
-
-          const teamTasks =
-            filteredTasks.filter(
-              (task) =>
-                task.team_id ===
-                team.id
-            );
-
-          const completed =
-            teamTasks.filter(
-              (task) =>
-                task.status ===
-                "completed"
-            ).length;
-
-          const presentations =
-            teamTasks.filter(
-              (task) =>
-                task.activity_type
-                  ?.toLowerCase() ===
-                  "presentation" &&
-                task.status ===
-                  "completed"
-            ).length;
-
-          const impact =
-            teamTasks.filter(
-              (task) =>
-                task.activity_type
-                  ?.toLowerCase() ===
-                  "impact activity" &&
-                task.status ===
-                  "completed"
-            ).length;
-
-          const outreach =
-            teamTasks.reduce(
-              (sum, task) =>
-                sum +
-                (
-                  task.audience_count ||
-                  0
-                ),
-              0
-            );
-
-          return (
-
-            <div
-
-              key={team.id}
-
-              className={`
-                rounded-3xl
-                p-6
-                border
-
-                ${
-                  completed >= 8
-                    ? "border-green-500/30 bg-green-500/5"
-                    : completed >= 4
-                    ? "border-cyan-500/30 bg-cyan-500/5"
-                    : "border-red-500/20 bg-red-500/5"
-                }
-              `}
-            >
-
-              <div className="
-                flex
-                flex-col
-                lg:flex-row
-                lg:items-center
-                lg:justify-between
-                gap-6
-              ">
-
-                <div>
-
-                  <h3 className="
-                    text-2xl
-                    font-black
-                  ">
-                    {team.team_name}
-                  </h3>
-
-                  <p className="
-                    text-gray-400
-                    mt-2
-                  ">
-                    {
-                      completed
-                    }
-                    {" "}
-                    completed activities
-                  </p>
-
-                </div>
-
-                <div className={`
-                  px-4
-                  py-2
-                  rounded-full
-                  text-sm
-                  font-black
-
-                  ${
-                    completed >= 8
-                      ? "bg-green-500/20 text-green-400"
-                      : completed >= 4
-                      ? "bg-cyan-500/20 text-cyan-400"
-                      : "bg-red-500/20 text-red-400"
-                  }
-                `}>
-
-                  {
-                    completed >= 8
-                      ? "TOP TEAM"
-                      : completed >= 4
-                      ? "STRONG"
-                      : "NEEDS IMPROVEMENT"
-                  }
-
-                </div>
-
-              </div>
-
-              <div className="
-                grid
-                grid-cols-2
-                md:grid-cols-4
-                gap-4
-                mt-6
-              ">
-
-                <div className="
-                  rounded-2xl
-                  bg-black/20
-                  p-4
-                ">
-
-                  <p className="
-                    text-xs
-                    text-gray-500
-                  ">
-                    Presentations
-                  </p>
-
-                  <h3 className="
-                    text-2xl
-                    font-black
-                    mt-2
-                    text-cyan-400
-                  ">
-                    {
-                      presentations
-                    }
-                  </h3>
-
-                </div>
-
-                <div className="
-                  rounded-2xl
-                  bg-black/20
-                  p-4
-                ">
-
-                  <p className="
-                    text-xs
-                    text-gray-500
-                  ">
-                    Impact Activities
-                  </p>
-
-                  <h3 className="
-                    text-2xl
-                    font-black
-                    mt-2
-                    text-pink-400
-                  ">
-                    {impact}
-                  </h3>
-
-                </div>
-
-                <div className="
-                  rounded-2xl
-                  bg-black/20
-                  p-4
-                ">
-
-                  <p className="
-                    text-xs
-                    text-gray-500
-                  ">
-                    Outreach
-                  </p>
-
-                  <h3 className="
-                    text-2xl
-                    font-black
-                    mt-2
-                    text-green-400
-                  ">
-                    {outreach}
-                  </h3>
-
-                </div>
-
-                <div className="
-                  rounded-2xl
-                  bg-black/20
-                  p-4
-                ">
-
-                  <p className="
-                    text-xs
-                    text-gray-500
-                  ">
-                    Completion
-                  </p>
-
-                  <h3 className="
-                    text-2xl
-                    font-black
-                    mt-2
-                    text-yellow-400
-                  ">
-                    {completed}
-                  </h3>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          );
-
-        })}
-
-    </div>
-
-  </div>
-
-)}
-
-{/* WEEKLY SNAPSHOTS */}
-
-<div className="
-  grid
-  grid-cols-1
-  md:grid-cols-2
-  xl:grid-cols-4
-  gap-6
-  mt-10
-">
-
-  {weeklyData.map((week) => (
-
-    <div
-
-      key={week.week}
-
-      className="
-        rounded-3xl
-        bg-white/5
-        border
-        border-white/10
-        p-5
-      "
-    >
-
-      <div className="
-        flex
-        items-center
-        justify-between
-        mb-4
-      ">
-
-        <h3 className="
-          text-xl
-          font-black
-          text-cyan-400
-        ">
-          {week.week}
-        </h3>
-
-        <div className={`
-          px-3
-          py-1
-          rounded-full
-          text-xs
-          font-bold
-
-          ${
-            week.completed >= 5
-              ? "bg-green-500/20 text-green-400"
-              : week.completed >= 2
-              ? "bg-yellow-500/20 text-yellow-400"
-              : "bg-red-500/20 text-red-400"
-          }
-        `}>
-
-          {
-            week.completed >= 5
-              ? "STRONG"
-              : week.completed >= 2
-              ? "AVERAGE"
-              : "LOW"
-          }
-
-        </div>
-
-      </div>
-
-      <div className="
-        space-y-4
-      ">
-
-        <div>
-
-          <div className="
-            flex
-            justify-between
-            text-sm
-            mb-1
-          ">
-
-            <span>
-              Presentations
-            </span>
-
-            <span className="
-              text-cyan-400
-            ">
-              {
-                week.presentations
-              }
-            </span>
-
-          </div>
-
-          <div className="
-            h-2
-            rounded-full
-            bg-white/10
-            overflow-hidden
-          ">
-
-            <div
-              className="
-                h-full
-                bg-cyan-400
-              "
-              style={{
-                width: `${
-                  Math.min(
-                    week.presentations * 10,
-                    100
-                  )
-                }%`
-              }}
-            />
-
-          </div>
-
-        </div>
-
-        <div>
-
-          <div className="
-            flex
-            justify-between
-            text-sm
-            mb-1
-          ">
-
-            <span>
-              Impact Activities
-            </span>
-
-            <span className="
-              text-pink-400
-            ">
-              {week.impact}
-            </span>
-
-          </div>
-
-          <div className="
-            h-2
-            rounded-full
-            bg-white/10
-            overflow-hidden
-          ">
-
-            <div
-              className="
-                h-full
-                bg-pink-400
-              "
-              style={{
-                width: `${
-                  Math.min(
-                    week.impact * 10,
-                    100
-                  )
-                }%`
-              }}
-            />
-
-          </div>
-
-        </div>
-
-        <div>
-
-          <div className="
-            flex
-            justify-between
-            text-sm
-            mb-1
-          ">
-
-            <span>
-              Outreach
-            </span>
-
-            <span className="
-              text-green-400
-            ">
-              {week.outreach}
-            </span>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  ))}
-
-</div>
-
-      )
-
-    </div>
-
+    }
+
+    if (selectedCollege === "all") {
+      return tasks;
+    }
+
+    return tasks.filter((task) => task.assigned_college_id === selectedCollege);
+  }, [profile?.college_id, profile?.role, selectedCollege, tasks]);
+
+  const filteredTeams = useMemo(() => {
+    if (profile?.role === "college_coordinator") {
+      return teams.filter((team) => team.college_id === profile?.college_id);
+    }
+
+    if (selectedCollege === "all") {
+      return teams;
+    }
+
+    return teams.filter((team) => team.college_id === selectedCollege);
+  }, [profile?.college_id, profile?.role, selectedCollege, teams]);
+
+  const filteredColleges = useMemo(() => {
+    if (profile?.role === "college_coordinator") {
+      return colleges.filter((college) => college.id === profile?.college_id);
+    }
+
+    if (selectedCollege === "all") {
+      return colleges;
+    }
+
+    return colleges.filter((college) => college.id === selectedCollege);
+  }, [colleges, profile?.college_id, profile?.role, selectedCollege]);
+
+  const analytics = useMemo(
+    () =>
+      generateAnalytics({
+        tasks: filteredTasks,
+        teams: filteredTeams,
+        colleges: filteredColleges,
+      }),
+    [filteredColleges, filteredTasks, filteredTeams]
   );
 
+  const executionChartData = [
+    {
+      name: "Activities",
+      total: analytics.totalTasks,
+      completed: analytics.totalCompleted,
+    },
+    {
+      name: "Impact",
+      total: analytics.totalImpactActivities,
+      completed: analytics.totalImpactActivities,
+    },
+    {
+      name: "Presentations",
+      total: analytics.totalPresentations,
+      completed: analytics.totalPresentations,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#081120] p-6 text-white">
+      <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-5xl font-black">Executive Reports</h1>
+          <p className="mt-2 text-gray-400">Cyber Shiksha for Cyber Suraksha</p>
+        </div>
+
+        {profile?.role === "admin" && (
+          <select
+            value={selectedCollege}
+            onChange={(e) => setSelectedCollege(e.target.value)}
+            className="rounded-2xl border border-cyan-500/20 bg-white/5 px-5 py-3 outline-none"
+          >
+            <option value="all">All Colleges</option>
+            {colleges.map((college) => (
+              <option key={college.id} value={college.id}>
+                {college.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div className="mb-8 flex gap-4 overflow-x-auto">
+        {["execution", "weekly", "groups", "colleges"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`whitespace-nowrap rounded-2xl px-5 py-3 font-bold ${
+              activeTab === tab ? "bg-cyan-500 text-black" : "bg-white/5"
+            }`}
+          >
+            {tab.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Total Activities" value={analytics.totalTasks} tone="cyan" />
+        <MetricCard label="Completed" value={analytics.totalCompleted} tone="green" />
+        <MetricCard
+          label="Presentations"
+          value={analytics.totalPresentations}
+          tone="yellow"
+        />
+        <MetricCard
+          label="Students Reached"
+          value={analytics.totalOutreach}
+          tone="pink"
+        />
+      </div>
+
+      {activeTab === "execution" && (
+        <ReportPanel title="Execution Overview">
+          <div className="h-[450px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={executionChartData}>
+                <CartesianGrid stroke="#1f2937" strokeDasharray="3 3" />
+                <XAxis dataKey="name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip />
+                <Bar dataKey="total" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="completed" fill="#22c55e" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ReportPanel>
+      )}
+
+      {activeTab === "weekly" && (
+        <ReportPanel title="Weekly Intelligence Report">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10 text-left">
+                  <th className="pb-4">Week</th>
+                  <th className="pb-4">Students</th>
+                  <th className="pb-4">Outreach</th>
+                  <th className="pb-4">Presentations</th>
+                  <th className="pb-4">Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.weeklyData.map((week) => (
+                  <tr key={`${week.week}-${week.dateRange}`} className="border-b border-white/5">
+                    <td className="py-5 font-bold text-cyan-400">
+                      {week.week}
+                      <div className="mt-1 text-xs text-gray-400">{week.dateRange}</div>
+                    </td>
+                    <td className="py-5">{week.studentsDone}</td>
+                    <td className="py-5">{week.outreachDone}</td>
+                    <td className="py-5">{week.presentationsDone}</td>
+                    <td className="py-5">{week.impactDone}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ReportPanel>
+      )}
+
+      {activeTab === "groups" && (
+        <ReportPanel title="Group Performance Intelligence">
+          <div className="space-y-5">
+            {analytics.teamAnalytics.map((team) => (
+              <div
+                key={team.id}
+                className="rounded-3xl border border-cyan-500/20 bg-black/20 p-6"
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h3 className="text-2xl font-black">{team.team_name}</h3>
+                    <p className="mt-2 text-gray-400">{team.completed} completed activities</p>
+                  </div>
+                  <div className="rounded-full bg-cyan-500/20 px-4 py-2 text-sm font-black text-cyan-300">
+                    {team.outreach} students reached
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <MiniStat label="Completed" value={team.completed} color="text-cyan-400" />
+                  <MiniStat
+                    label="Presentations"
+                    value={team.presentations}
+                    color="text-yellow-400"
+                  />
+                  <MiniStat label="Impact" value={team.impact} color="text-pink-400" />
+                  <MiniStat label="Outreach" value={team.outreach} color="text-green-400" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </ReportPanel>
+      )}
+
+      {activeTab === "colleges" && (
+        <ReportPanel title="College-Wise Analytics">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {analytics.collegeAnalytics.map((college) => (
+              <div
+                key={college.id}
+                className="rounded-3xl border border-white/10 bg-black/20 p-6"
+              >
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-black">{college.name}</h3>
+                    <p className="mt-1 text-sm text-gray-400">
+                      {college.completed} completed of {college.totalTasks} total activities
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-300">
+                    {college.completionRate}% completion
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <MiniStat label="Completed" value={college.completed} color="text-green-400" />
+                  <MiniStat label="Outreach" value={college.outreach} color="text-cyan-400" />
+                  <MiniStat
+                    label="Presentations"
+                    value={college.presentations}
+                    color="text-yellow-400"
+                  />
+                  <MiniStat label="Impact" value={college.impact} color="text-pink-400" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </ReportPanel>
+      )}
+    </div>
+  );
+}
+
+function ReportPanel({ title, children }) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <h2 className="mb-6 text-3xl font-black">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, tone }) {
+  const tones = {
+    cyan: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300",
+    green: "bg-green-500/10 border-green-500/20 text-green-300",
+    yellow: "bg-yellow-500/10 border-yellow-500/20 text-yellow-300",
+    pink: "bg-pink-500/10 border-pink-500/20 text-pink-300",
+  };
+
+  return (
+    <div className={`rounded-3xl border p-6 ${tones[tone]}`}>
+      <p>{label}</p>
+      <h2 className="mt-2 text-5xl font-black text-white">{value}</h2>
+    </div>
+  );
+}
+
+function MiniStat({ label, value, color }) {
+  return (
+    <div className="rounded-2xl bg-white/5 p-4">
+      <p className="text-xs text-gray-500">{label}</p>
+      <h3 className={`mt-2 text-2xl font-black ${color}`}>{value}</h3>
+    </div>
+  );
 }
 
 export default ExecutiveReportsPage;

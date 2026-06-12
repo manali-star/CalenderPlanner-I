@@ -301,7 +301,7 @@ groupedWeeks[
       const teamTasks =
         completedTasks.filter(
           (task) =>
-            task.team_id ===
+            task.assigned_team_id ===
             team.id
         );
 
@@ -358,14 +358,21 @@ groupedWeeks[
       (college) => {
 
         const collegeTasks =
-          completedTasks.filter(
+          tasks.filter(
             (task) =>
               task.assigned_college_id ===
               college.id
           );
 
+        const completedCollegeTasks =
+          collegeTasks.filter(
+            (task) =>
+              task.status === "completed" ||
+              task.status === "approved"
+          );
+
         const outreach =
-          collegeTasks.reduce(
+          completedCollegeTasks.reduce(
             (sum, task) =>
               sum +
               (
@@ -380,9 +387,37 @@ groupedWeeks[
           ...college,
 
           completed:
+            completedCollegeTasks.length,
+
+          totalTasks:
             collegeTasks.length,
 
           outreach,
+
+          presentations:
+            completedCollegeTasks.filter(
+              (task) =>
+                task.activity_type
+                  ?.toLowerCase() ===
+                "presentation"
+            ).length,
+
+          impact:
+            completedCollegeTasks.filter(
+              (task) =>
+                task.activity_type
+                  ?.toLowerCase() ===
+                "impact activity"
+            ).length,
+
+          completionRate:
+            collegeTasks.length === 0
+              ? 0
+              : Math.round(
+                  (completedCollegeTasks.length /
+                    collegeTasks.length) *
+                    100
+                ),
 
         };
 
