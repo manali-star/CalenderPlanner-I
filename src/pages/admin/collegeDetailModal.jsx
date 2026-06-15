@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, CheckCircle2, Clock3, XCircle, ExternalLink, ChevronDown, ChevronRight, Shield } from "lucide-react";
+import { X, Users, CheckCircle2, Clock3, ExternalLink, ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 // ─── FORMAT DATE HELPER ───────────────────────────────────────────────────────
@@ -12,12 +12,15 @@ function fmt(iso) {
   });
 }
 
-// ─── STATUS CONFIG ────────────────────────────────────────────────────────────
+// ─── STATUS CONFIG — aligned with the multi-officer workflow ─────────────────
 const STATUS = {
-  approved:  { label: "Approved",       color: "bg-green-500/10 border-green-500/20 text-green-400" },
-  submitted: { label: "Pending Review", color: "bg-yellow-500/10 border-yellow-500/20 text-yellow-400" },
-  rejected:  { label: "Rejected",       color: "bg-red-500/10 border-red-500/20 text-red-400" },
-  planned:   { label: "Assigned",       color: "bg-blue-500/10 border-blue-500/20 text-blue-400" },
+  completed:               { label: "Completed",             color: "bg-green-500/10 border-green-500/20 text-green-400" },
+  pending_officer_review:  { label: "Pending Officer Review", color: "bg-yellow-500/10 border-yellow-500/20 text-yellow-400" },
+  awaiting_coordinator:    { label: "Awaiting Coordinator",   color: "bg-purple-500/10 border-purple-500/20 text-purple-400" },
+  returned_by_coordinator: { label: "Returned for Revision",  color: "bg-orange-500/10 border-orange-500/20 text-orange-400" },
+  revision_requested:      { label: "Revision Requested",     color: "bg-orange-500/10 border-orange-500/20 text-orange-400" },
+  rejected_by_officer:     { label: "Rejected",               color: "bg-red-500/10 border-red-500/20 text-red-400" },
+  planned:                 { label: "Assigned",               color: "bg-blue-500/10 border-blue-500/20 text-blue-400" },
 };
 
 const TABS = ["Overview", "Teams", "Task Records", "Proof Vault"];
@@ -102,12 +105,26 @@ export default function CollegeDetailModal({ college, onClose }) {
 
   if (!college) return null;
 
+  // ── HELPER: resolve a human-readable "assigned to" label for a task ──────
+  const getAssignedLabel = (task) => {
+    if (task.activity_type === "Mass Activity") {
+      return "All Teams (Mass Activity)";
+    }
+    if (task.assignment_type === "team") {
+      const team = teams.find(t => t.id === task.assigned_team_id);
+      return team?.team_name || "Unknown Team";
+    }
+    return task.assigned_user_name || "Warrior";
+  };
+
   // ── COMPUTED STATS ────────────────────────────────────────────────────────
-  const approved  = tasks.filter(t => t.status === "approved").length;
-  const submitted = tasks.filter(t => t.status === "submitted").length;
-  const rejected  = tasks.filter(t => t.status === "rejected").length;
-  const planned   = tasks.filter(t => t.status === "planned").length;
-  const proofs    = tasks.filter(t => t.proof_url);
+  const completed             = tasks.filter(t => t.status === "completed").length;
+  const pendingOfficerReview  = tasks.filter(t => t.status === "pending_officer_review").length;
+  const awaitingCoordinator   = tasks.filter(t => t.status === "awaiting_coordinator").length;
+  const returnedForRevision   = tasks.filter(t => t.status === "returned_by_coordinator" || t.status === "revision_requested").length;
+  const rejected              = tasks.filter(t => t.status === "rejected_by_officer").length;
+  const planned               = tasks.filter(t => t.status === "planned").length;
+  const proofs                = tasks.filter(t => t.proof_url);
 
   return (
     <AnimatePresence>
@@ -193,7 +210,7 @@ export default function CollegeDetailModal({ college, onClose }) {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <StatTile icon={<Users size={18} className="text-blue-400" />} label="Teams" value={teams.length} color="text-blue-400" />
                     <StatTile icon={<Users size={18} className="text-purple-400" />} label="Warriors" value={warriors.filter(w => w.role === "warrior").length} color="text-purple-400" />
-                    <StatTile icon={<CheckCircle2 size={18} className="text-green-400" />} label="Approved" value={approved} color="text-green-400" />
+                    <StatTile icon={<CheckCircle2 size={18} className="text-green-400" />} label="Completed" value={completed} color="text-green-400" />
                     <StatTile icon={<Shield size={18} className="text-yellow-400" />} label="Total Tasks" value={tasks.length} color="text-yellow-400" />
                   </div>
 
@@ -202,10 +219,12 @@ export default function CollegeDetailModal({ college, onClose }) {
                     <h3 className="text-lg font-black text-white mb-5">Task Status Breakdown</h3>
                     <div className="space-y-3">
                       {[
-                        { label: "Approved",       count: approved,  total: tasks.length, color: "bg-green-500" },
-                        { label: "Pending Review", count: submitted, total: tasks.length, color: "bg-yellow-500" },
-                        { label: "Rejected",       count: rejected,  total: tasks.length, color: "bg-red-500" },
-                        { label: "Assigned",       count: planned,   total: tasks.length, color: "bg-blue-500" },
+                        { label: "Completed",              count: completed,            total: tasks.length, color: "bg-green-500" },
+                        { label: "Pending Officer Review", count: pendingOfficerReview, total: tasks.length, color: "bg-yellow-500" },
+                        { label: "Awaiting Coordinator",   count: awaitingCoordinator,  total: tasks.length, color: "bg-purple-500" },
+                        { label: "Returned for Revision",  count: returnedForRevision,  total: tasks.length, color: "bg-orange-500" },
+                        { label: "Rejected",               count: rejected,             total: tasks.length, color: "bg-red-500" },
+                        { label: "Assigned",               count: planned,              total: tasks.length, color: "bg-blue-500" },
                       ].map(row => (
                         <div key={row.label}>
                           <div className="flex justify-between text-sm mb-1">
@@ -245,7 +264,7 @@ export default function CollegeDetailModal({ college, onClose }) {
                       const teamMembers = members[team.id] || [];
                       const isExpanded = expandedTeam === team.id;
                       const teamTasks = tasks.filter(t => t.assigned_team_id === team.id);
-                      const teamApproved = teamTasks.filter(t => t.status === "approved").length;
+                      const teamCompleted = teamTasks.filter(t => t.status === "completed").length;
 
                       return (
                         <motion.div
@@ -266,7 +285,7 @@ export default function CollegeDetailModal({ college, onClose }) {
                               </div>
                               <div>
                                 <p className="text-white font-bold text-lg">{team.team_name || team.name}</p>
-                                <p className="text-gray-500 text-sm">{teamMembers.length} members · {teamTasks.length} tasks · {teamApproved} approved</p>
+                                <p className="text-gray-500 text-sm">{teamMembers.length} members · {teamTasks.length} tasks · {teamCompleted} completed</p>
                               </div>
                             </div>
                             {isExpanded ? <ChevronDown size={18} className="text-gray-400" /> : <ChevronRight size={18} className="text-gray-400" />}
@@ -335,7 +354,6 @@ export default function CollegeDetailModal({ college, onClose }) {
                   ) : (
                     tasks.map((task, idx) => {
                       const cfg = STATUS[task.status] || STATUS.planned;
-                      const isTeam = task.assignment_type === "team";
 
                       return (
                         <motion.div
@@ -350,7 +368,7 @@ export default function CollegeDetailModal({ college, onClose }) {
                             <div className="flex-1 min-w-0">
                               <p className="text-white font-bold text-base leading-snug truncate">{task.title}</p>
                               <p className="text-gray-500 text-xs mt-1">
-                                {isTeam ? "Team Task" : "Individual Task"} · Created {fmt(task.created_at)}
+                                {task.activity_type || "Technical"} · Created {fmt(task.created_at)}
                               </p>
                             </div>
                             <span className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black border ${cfg.color}`}>
@@ -360,11 +378,17 @@ export default function CollegeDetailModal({ college, onClose }) {
 
                           {/* META GRID */}
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                            <MetaCell label="Assigned To" value={isTeam ? (task.assigned_team_name || "Team") : (task.assigned_user_name || "Warrior")} />
-                            <MetaCell label="Deadline" value={task.deadline ? fmt(task.deadline) : "No deadline"} />
-                            <MetaCell label="Priority" value={task.priority || "—"} />
+                            <MetaCell label="Assigned To" value={getAssignedLabel(task)} />
+                            <MetaCell label="Due Date" value={task.due_date ? fmt(task.due_date) : "No due date"} />
+                            <MetaCell label="Activity Type" value={task.activity_type || "Technical"} />
                             {task.completion_date && (
                               <MetaCell label="Submitted On" value={fmt(task.completion_date)} highlight />
+                            )}
+                            {task.proof_text && (
+                              <div className="col-span-2 md:col-span-3 rounded-xl bg-black/20 border border-white/5 px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Warrior Notes</p>
+                                <p className="text-gray-300 text-sm leading-relaxed">{task.proof_text}</p>
+                              </div>
                             )}
                             {task.remarks && (
                               <div className="col-span-2 md:col-span-3 rounded-xl bg-black/20 border border-white/5 px-4 py-3">
@@ -376,6 +400,12 @@ export default function CollegeDetailModal({ college, onClose }) {
                               <div className="col-span-2 md:col-span-3 rounded-xl bg-red-500/5 border border-red-500/20 px-4 py-3">
                                 <p className="text-[10px] uppercase tracking-widest text-red-500 mb-1">Rejection Reason</p>
                                 <p className="text-red-300 text-sm leading-relaxed">{task.rejection_reason}</p>
+                              </div>
+                            )}
+                            {task.coordinator_feedback && (
+                              <div className="col-span-2 md:col-span-3 rounded-xl bg-orange-500/5 border border-orange-500/20 px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-widest text-orange-400 mb-1">Coordinator Feedback</p>
+                                <p className="text-orange-300 text-sm leading-relaxed">{task.coordinator_feedback}</p>
                               </div>
                             )}
                           </div>
@@ -425,7 +455,7 @@ export default function CollegeDetailModal({ college, onClose }) {
                                 <div className="flex-1 min-w-0">
                                   <p className="text-white font-bold leading-snug truncate">{task.title}</p>
                                   <p className="text-gray-500 text-xs mt-1">
-                                    {task.assignment_type === "team" ? "Team Task" : "Individual"} · {task.assigned_user_name || "Warrior"}
+                                    {task.activity_type || "Technical"} · {getAssignedLabel(task)}
                                   </p>
                                 </div>
                                 <span className={`shrink-0 px-2 py-1 rounded-full text-[9px] font-black border ${cfg.color}`}>
@@ -441,18 +471,18 @@ export default function CollegeDetailModal({ college, onClose }) {
                                     <span>Submitted: {fmt(task.completion_date)}</span>
                                   </div>
                                 )}
-                                {task.deadline && (
+                                {task.due_date && (
                                   <div className="flex items-center gap-2 text-gray-500">
                                     <Clock3 size={11} />
-                                    <span>Deadline: {fmt(task.deadline)}</span>
+                                    <span>Due: {fmt(task.due_date)}</span>
                                   </div>
                                 )}
                               </div>
 
-                              {/* REMARKS SNIPPET */}
-                              {task.remarks && (
+                              {/* NOTES SNIPPET */}
+                              {(task.proof_text || task.remarks) && (
                                 <p className="text-gray-400 text-xs leading-relaxed mb-4 line-clamp-2 italic">
-                                  "{task.remarks}"
+                                  "{task.proof_text || task.remarks}"
                                 </p>
                               )}
 
@@ -509,10 +539,3 @@ function EmptyState({ icon, message }) {
     </div>
   );
 }
-
-// Need Clock3 import — already included in lucide imports above
-const Clock3 = ({ size, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/>
-  </svg>
-);
