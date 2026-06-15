@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Shield, Users, Activity, Crown } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
+import CollegeDetailModal from "./CollegeDetailModal";   // ── CHANGE 2: drill-down modal ──
 
 function AdminPage() {
   const [profiles, setProfiles] = useState([]);
@@ -13,6 +14,9 @@ function AdminPage() {
   const [colleges, setColleges] = useState([]);
   const [presidents, setPresidents] = useState([]);
   const [pendingCoordinators, setPendingCoordinators] = useState([]);
+
+  // ── CHANGE 2: selected college for drill-down modal ──
+  const [selectedCollege, setSelectedCollege] = useState(null);
 
   const fetchAdminData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -206,9 +210,19 @@ useEffect(() => {
   className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8"
 >
 
-  <h2 className="text-3xl font-bold text-white mb-8">
-    College Chapters
-  </h2>
+  <div className="flex items-center justify-between mb-8">
+    <div>
+      <h2 className="text-3xl font-bold text-white">
+        College Chapters
+      </h2>
+      <p className="text-gray-500 text-sm mt-1">
+        Click any college card to view teams, task records & proof submissions.
+      </p>
+    </div>
+    <span className="px-4 py-2 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm font-bold">
+      {colleges.length} Colleges
+    </span>
+  </div>
 
   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
@@ -226,16 +240,29 @@ useEffect(() => {
           p.role === "college_coordinator"
       );
 
+      // ── CHANGE 2: per-college task stats ──
+      const collegeTasks = tasks.filter(
+        (t) => t.assigned_college_id === college.id
+      );
+      const completedCount = collegeTasks.filter(t => t.status === "completed").length;
+      const proofCount = collegeTasks.filter(t => t.proof_url).length;
+
       return (
 
         <div
           key={college.id}
-          className="rounded-3xl border border-yellow-500/10 bg-black/20 p-6"
+          className="rounded-3xl border border-yellow-500/10 bg-black/20 p-6 hover:border-yellow-500/30 hover:bg-black/30 transition-all group cursor-pointer"
+          onClick={() => setSelectedCollege(college)}   // ── CHANGE 2: open drill-down ──
         >
 
-          <h3 className="text-2xl font-black text-white mb-4">
-            {college.name}
-          </h3>
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-2xl font-black text-white group-hover:text-yellow-400 transition-colors">
+              {college.name}
+            </h3>
+            <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500/50 group-hover:text-yellow-400 transition-colors pt-1">
+              View →
+            </span>
+          </div>
 
           <div className="space-y-3">
 
@@ -245,7 +272,11 @@ useEffect(() => {
 
   value={college.president_id || ""}
 
+  onClick={(e) => e.stopPropagation()}   // ── CHANGE 2: don't open modal when using dropdown ──
+
   onChange={async (e) => {
+
+    e.stopPropagation();   // ── CHANGE 2 ──
 
     const presidentId = e.target.value;
 
@@ -321,6 +352,22 @@ useEffect(() => {
               <p className="text-yellow-400 font-bold text-xl">
                 {warriors.length}
               </p>
+            </div>
+
+            {/* ── CHANGE 2: quick stats row ── */}
+            <div className="pt-3 mt-2 border-t border-white/5 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-xs text-gray-600">Tasks</p>
+                <p className="text-white font-black">{collegeTasks.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Completed</p>
+                <p className="text-green-400 font-black">{completedCount}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Proofs</p>
+                <p className="text-yellow-400 font-black">{proofCount}</p>
+              </div>
             </div>
 
           </div>
@@ -567,6 +614,14 @@ useEffect(() => {
   </div>
 
 </motion.div>
+
+      {/* ── CHANGE 2: College Detail Drill-Down Modal ── */}
+      {selectedCollege && (
+        <CollegeDetailModal
+          college={selectedCollege}
+          onClose={() => setSelectedCollege(null)}
+        />
+      )}
     </div>
   );
 }
