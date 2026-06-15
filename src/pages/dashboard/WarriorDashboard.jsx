@@ -116,6 +116,7 @@ function WarriorDashboard() {
           proof_url: data?.publicUrl || "",
           proof_text: proofText,
           remarks: proofText,
+          completion_date: new Date().toISOString(),
         })
         .eq("id", task.id);
 
