@@ -10,6 +10,7 @@ import {
   CheckSquare,
   AlertCircle,
   ListTodo,
+  Clock,
 } from "lucide-react";
 
 import AddActivityModal from "../../components/modals/AddActivityModal";
@@ -24,6 +25,20 @@ const OFFICER_PASSWORDS = {
 
 const PROOF_REQUIREMENTS_TEXT =
   "Include clear event proof, visible date or venue details when possible, supporting notes or links, and the final student reach or impact summary.";
+
+// ── CHANGE 1: Format ISO date string into readable "DD MMM YYYY, HH:MM AM/PM" ──
+function formatSubmissionDate(isoString) {
+  if (!isoString) return null;
+  const d = new Date(isoString);
+  return d.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 function TasksPage() {
   const [profile, setProfile] = useState(null);
@@ -78,6 +93,7 @@ const fetchActivities = async (userProfile) => {
     assigned_college_id,
     proof_url,
     proof_submitted,
+    completion_date,
     created_at,
     due_date,
     rejection_reason,
@@ -394,8 +410,8 @@ const activityPayload = await Promise.all(
       venue: activity.location,
       audience_count: Number(activity.participants) || 0,
       target_students: Number(activity.target_students) || 0,
-      description: activity.description,
-      priority: activity.priority || "medium",
+      // ── CHANGE 3: priority field removed (no longer collected in AddActivityModal) ──
+      // ── CHANGE 4: description field removed (no longer collected in AddActivityModal) ──
       assignment_type: "team",
       assigned_to: null,
       assigned_team_id:
@@ -605,6 +621,9 @@ const handleReject = async (
       president_approved: false,
 
       proof_url: null,
+
+      // ── CHANGE 1: clear submission timestamp on rejection — warrior must resubmit ──
+      completion_date: null,
 
     })
     .eq("id", activity.id);
@@ -820,7 +839,7 @@ const handleReject = async (
     </h3>
 
     {/* Proof */}
-    <a
+    
       href={activity.proof_url}
       target="_blank"
       rel="noreferrer"
@@ -836,11 +855,24 @@ const handleReject = async (
         border-blue-500/30
         text-blue-300
         font-bold
-        mb-5
+        mb-3
       "
     >
       View Proof
     </a>
+
+    {/* ── CHANGE 1: Submission timestamp visible to reviewing officers ── */}
+    {activity.completion_date && (
+      <div className="flex items-center gap-2 mb-5 px-4 py-3 rounded-xl bg-black/20 border border-yellow-500/10">
+        <Clock size={14} className="text-yellow-400 shrink-0" />
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">Submitted On</p>
+          <p className="text-yellow-300 text-sm font-semibold">
+            {formatSubmissionDate(activity.completion_date)}
+          </p>
+        </div>
+      </div>
+    )}
 
 
     {!(
@@ -1480,6 +1512,10 @@ const { error: uploadError } =
           status:
             "pending_officer_review",
 
+          // ── CHANGE 1: record exact submission timestamp ──
+          completion_date:
+            new Date().toISOString(),
+
         })
         .eq("id", activity.id);
 
@@ -1508,6 +1544,42 @@ const { error: uploadError } =
   Submit Proof →
 </button>
           </div>
+        )}
+
+        {/* ── CHANGE 1: "Proof Submitted" panel for warrior — shows submission timestamp ── */}
+        {isWarrior &&
+          activity.proof_url &&
+          activity.activity_type !== "Mass Activity" && (
+            <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 font-black">
+                  Proof Submitted
+                </p>
+                <span className="text-lg">📄</span>
+              </div>
+
+              {activity.completion_date && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-black/20 border border-cyan-500/10">
+                  <Clock size={13} className="text-cyan-400 shrink-0" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">Submitted On</p>
+                    <p className="text-cyan-300 text-sm font-semibold">
+                      {formatSubmissionDate(activity.completion_date)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              
+                href={activity.proof_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center justify-center w-full py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm font-bold hover:bg-cyan-500/20 transition-all"
+              >
+                View Your Submitted Proof →
+              </a>
+            </div>
         )}
 
         {activity.activity_type ===
@@ -1703,6 +1775,10 @@ const { error: uploadError } =
                 coordinator_approved:
                   true,
 
+                // ── CHANGE 1: record submission/finalization timestamp ──
+                completion_date:
+                  new Date().toISOString(),
+
               })
 
           .eq("id", activity.id);
@@ -1754,6 +1830,19 @@ const { error: uploadError } =
       <p className="text-gray-400 text-sm mt-2">
         Final proof and outreach have already been submitted.
       </p>
+
+      {/* ── CHANGE 1: show when the mass activity was finalized ── */}
+      {activity.completion_date && (
+        <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-black/20 border border-emerald-500/10">
+          <Clock size={13} className="text-emerald-400 shrink-0" />
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">Finalized On</p>
+            <p className="text-emerald-300 text-sm font-semibold">
+              {formatSubmissionDate(activity.completion_date)}
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
 
