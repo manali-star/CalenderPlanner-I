@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   CheckCircle2,
   Clock3,
+  Clock,
   AlertTriangle,
   Target,
 } from "lucide-react";
