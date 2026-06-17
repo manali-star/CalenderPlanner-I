@@ -17,6 +17,20 @@ const PROOF_GUIDELINES = [
   "Final student reach or impact count",
 ].join(", ");
 
+// ── CHANGE 4: Format ISO timestamp into readable local date/time ──
+function formatSubmissionDate(isoString) {
+  if (!isoString) return null;
+  const d = new Date(isoString);
+  return d.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function WarriorDashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +152,8 @@ function WarriorDashboard() {
                 proof_url: data?.publicUrl || "",
                 proof_text: proofText,
                 remarks: proofText,
+              // ── CHANGE 4: reflect timestamp in local state immediately ──
+                completion_date: new Date().toISOString(),
               }
             : item
         )
