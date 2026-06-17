@@ -442,6 +442,49 @@ function WarriorDashboard() {
               </button>
             </div>
           ))}
+        {/* ── CHANGE 4: Cards for tasks that already have proof submitted ── */}
+        {tasks
+          .filter(
+            (task) =>
+              task.proof_url &&
+              task.status !== "completed" &&
+              task.activity_type !== "Mass Activity"
+          )
+          .map((task) => (
+            <div
+              key={task.id}
+              className="rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 p-6"
+            >
+              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400">
+                Proof Submitted — Under Review
+              </p>
+              <h3 className="mb-4 text-2xl font-black text-white">{task.title}</h3>
+
+              {/* Submission timestamp */}
+              {task.completion_date && (
+                <div className="flex items-center gap-2 mb-4 px-4 py-3 rounded-2xl bg-black/20 border border-cyan-500/10">
+                  <Clock size={14} className="text-cyan-400 shrink-0" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">
+                      Submitted On
+                    </p>
+                    <p className="text-cyan-300 text-sm font-semibold">
+                      {formatSubmissionDate(task.completion_date)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              
+                href={task.proof_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center w-full py-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-bold hover:bg-cyan-500/20 transition-all"
+              >
+                View Submitted Proof →
+              </a>
+            </div>
+          ))}
       </div>
     </div>
   );
