@@ -410,8 +410,6 @@ const activityPayload = await Promise.all(
       venue: activity.location,
       audience_count: Number(activity.participants) || 0,
       target_students: Number(activity.target_students) || 0,
-      // ── CHANGE 3: priority field removed (no longer collected in AddActivityModal) ──
-      // ── CHANGE 4: description field removed (no longer collected in AddActivityModal) ──
       assignment_type: "team",
       assigned_to: null,
       assigned_team_id:
@@ -536,44 +534,32 @@ const handleApprove = async (role) => {
 
   let updates = {};
 
-  // Secretary
   if (role === "secretary") {
-
     updates = {
       secretary_approved: true,
       secretary_status: "approved",
     };
-
   }
 
-  // Activity Director
   if (role === "activity") {
-
     updates = {
       activity_approved: true,
       activity_status: "approved",
     };
-
   }
 
-  // Media Director
   if (role === "media") {
-
     updates = {
       media_approved: true,
       media_status: "approved",
     };
-
   }
 
-  // President
   if (role === "president") {
-
     updates = {
       president_approved: true,
       status: "awaiting_coordinator",
     };
-
   }
 
   const { error } = await supabase
@@ -582,10 +568,8 @@ const handleApprove = async (role) => {
     .eq("id", activity.id);
 
   if (error) {
-
     toast.error(error.message);
     return;
-
   }
 
   toast.success(`${role} approval completed`);
@@ -602,37 +586,25 @@ const handleReject = async (
   const { error } = await supabase
     .from("tasks")
     .update({
-
       status: "rejected_by_officer",
-
       rejection_reason: reason,
-
       rejected_by: role,
-
       secretary_approved: false,
       secretary_status: "pending",
-
       activity_approved: false,
       activity_status: "pending",
-
       media_approved: false,
       media_status: "pending",
-
       president_approved: false,
-
       proof_url: null,
-
-      // ── CHANGE 1: clear submission timestamp on rejection — warrior must resubmit ──
+      // ── CHANGE 1: clear timestamp on rejection so warrior gets a fresh one on resubmit ──
       completion_date: null,
-
     })
     .eq("id", activity.id);
 
   if (error) {
-
     toast.error(error.message);
     return;
-
   }
 
   toast.success("Task Rejected");
@@ -722,8 +694,6 @@ const handleReject = async (
           </div>
         </div>
 
-    
-
         <div className="bg-black/20 border border-white/5 rounded-xl p-3 mb-4">
           <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 font-black mb-4">
             Workflow Progress
@@ -763,8 +733,6 @@ const handleReject = async (
               </div>
             ))}
           </div>
-
-
         </div>
 
         <div className="space-y-2 text-sm mb-4 text-gray-300">
@@ -838,7 +806,7 @@ const handleReject = async (
       Multi-level Verification
     </h3>
 
-    {/* Proof */}
+    {/* Proof link */}
     
       href={activity.proof_url}
       target="_blank"
@@ -873,7 +841,6 @@ const handleReject = async (
         </div>
       </div>
     )}
-
 
     {!(
   activity.secretary_approved &&
@@ -935,35 +902,24 @@ const handleReject = async (
       </button>
 
       <button
-
-  onClick={() => {
-
-  const reason = prompt(
-    "Enter rejection reason"
-  );
-
-  if (!reason) return;
-
-  handleReject(
-    "secretary",
-    reason
-  );
-
-}}
-
-  className="
-    px-5
-    py-2
-    rounded-xl
-    bg-red-500/20
-    border
-    border-red-500/30
-    text-red-400
-    font-bold
-  "
->
-  Reject
-</button>
+        onClick={() => {
+          const reason = prompt("Enter rejection reason");
+          if (!reason) return;
+          handleReject("secretary", reason);
+        }}
+        className="
+          px-5
+          py-2
+          rounded-xl
+          bg-red-500/20
+          border
+          border-red-500/30
+          text-red-400
+          font-bold
+        "
+      >
+        Reject
+      </button>
 
     </div>
 
@@ -1025,19 +981,10 @@ const handleReject = async (
 
       <button
         onClick={() => {
-
-  const reason = prompt(
-    "Enter rejection reason"
-  );
-
-  if (!reason) return;
-
-  handleReject(
-    "activity",
-    reason
-  );
-
-}}
+          const reason = prompt("Enter rejection reason");
+          if (!reason) return;
+          handleReject("activity", reason);
+        }}
         className="
           px-5
           py-2
@@ -1112,19 +1059,10 @@ const handleReject = async (
 
       <button
         onClick={() => {
-
-  const reason = prompt(
-    "Enter rejection reason"
-  );
-
-  if (!reason) return;
-
-  handleReject(
-    "media",
-    reason
-  );
-
-}}
+          const reason = prompt("Enter rejection reason");
+          if (!reason) return;
+          handleReject("media", reason);
+        }}
         className="
           px-5
           py-2
@@ -1234,24 +1172,17 @@ const handleReject = async (
             await supabase
               .from("tasks")
               .update({
-
                 status: "completed",
-
                 coordinator_approved: true,
-
               })
               .eq("id", activity.id);
 
           if (error) {
-
             toast.error(error.message);
             return;
-
           }
 
-          toast.success(
-            "Task Approved"
-          );
+          toast.success("Task Approved");
 
           fetchActivities();
 
@@ -1276,46 +1207,31 @@ const handleReject = async (
       <button
 
         onClick={async () => {
-          const reason = prompt(
-  "Enter rejection reason"
-);
-
-if (!reason) return;
+          const reason = prompt("Enter rejection reason");
+          if (!reason) return;
 
           const { error } =
             await supabase
               .from("tasks")
               .update({
-
-                status:
-                  "returned_by_coordinator",
-
-                  coordinator_feedback: reason,
-
-                  secretary_approved: false,
-                  secretary_status: "pending",
-
-                  activity_approved: false,
-                  activity_status: "pending",
-
-                  media_approved: false,
-                  media_status: "pending",
-
-                  president_approved: false,
-
+                status: "returned_by_coordinator",
+                coordinator_feedback: reason,
+                secretary_approved: false,
+                secretary_status: "pending",
+                activity_approved: false,
+                activity_status: "pending",
+                media_approved: false,
+                media_status: "pending",
+                president_approved: false,
               })
               .eq("id", activity.id);
 
           if (error) {
-
             toast.error(error.message);
             return;
-
           }
 
-          toast.success(
-            "Returned To Officers"
-          );
+          toast.success("Returned To Officers");
 
           fetchActivities();
 
@@ -1451,13 +1367,8 @@ if (!reason) return;
   onClick={async () => {
 
     if (!proofFile) {
-
-      toast.error(
-        "Please select proof file"
-      );
-
+      toast.error("Please select proof file");
       return;
-
     }
 
     const cleanName =
@@ -1484,11 +1395,8 @@ const { error: uploadError } =
     .upload(filePath, proofFile);
 
     if (uploadError) {
-
       toast.error("Upload failed");
-
       return;
-
     }
 
     // GET PUBLIC URL
@@ -1497,47 +1405,32 @@ const { error: uploadError } =
         .from("activity-proofs")
         .getPublicUrl(filePath);
 
-    // UPDATE TASK
+    // ── CHANGE 1: record exact submission timestamp when warrior submits proof ──
     const { error } =
       await supabase
         .from("tasks")
         .update({
-
           proof_url:
             data?.publicUrl || "",
-
           proof_text:
             proofText,
-
           status:
             "pending_officer_review",
-
-          // ── CHANGE 1: record exact submission timestamp ──
           completion_date:
             new Date().toISOString(),
-
         })
         .eq("id", activity.id);
 
     if (error) {
-
-      toast.error(
-        "Failed to submit proof"
-      );
-
+      toast.error("Failed to submit proof");
       return;
-
     }
 
-    toast.success(
-      "Proof Submitted"
-    );
+    toast.success("Proof Submitted");
 
     await refresh(profile);
 
   }}
-
-  
 
   className="w-full py-2 rounded-xl bg-gradient-to-r from-pink-500 to-red-500 font-black text-sm hover:scale-[1.01] transition-all"
 >
@@ -1546,7 +1439,7 @@ const { error: uploadError } =
           </div>
         )}
 
-        {/* ── CHANGE 1: "Proof Submitted" panel for warrior — shows submission timestamp ── */}
+        {/* ── CHANGE 1: "Proof Submitted" panel — shows warrior their own submission timestamp ── */}
         {isWarrior &&
           activity.proof_url &&
           activity.activity_type !== "Mass Activity" && (
@@ -1559,6 +1452,7 @@ const { error: uploadError } =
                 <span className="text-lg">📄</span>
               </div>
 
+              {/* ── CHANGE 1: Timestamp chip shown to warrior ── */}
               {activity.completion_date && (
                 <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-black/20 border border-cyan-500/10">
                   <Clock size={13} className="text-cyan-400 shrink-0" />
@@ -1736,13 +1630,8 @@ const { error: uploadError } =
                 );
 
             if (uploadError) {
-
-              toast.error(
-                "Proof upload failed"
-              );
-
+              toast.error("Proof upload failed");
               return;
-
             }
 
             const { data } =
@@ -1758,44 +1647,30 @@ const { error: uploadError } =
             await supabase
               .from("tasks")
               .update({
-
                 status: "completed",
-
                 proof_url:
                   proofUrl || null,
-
                 audience_count:
                   Number(
                     massAudienceCount
                   ) || 0,
-
                 remarks:
                   massRemarks || "",
-
                 coordinator_approved:
                   true,
-
-                // ── CHANGE 1: record submission/finalization timestamp ──
+                // ── CHANGE 1: record finalization timestamp for mass activities ──
                 completion_date:
                   new Date().toISOString(),
-
               })
 
           .eq("id", activity.id);
 
           if (error) {
-
-            toast.error(
-              "Submission failed"
-            );
-
+            toast.error("Submission failed");
             return;
-
           }
 
-          toast.success(
-            "Mass Activity Completed"
-          );
+          toast.success("Mass Activity Completed");
 
           await fetchActivities(profile);
 
