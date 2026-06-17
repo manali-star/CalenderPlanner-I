@@ -33,6 +33,8 @@ function AnalyticsPage() {
   const [warriors, setWarriors] = useState([]);
   const [teams, setTeams] = useState([]);
   const [colleges, setColleges] = useState([]);
+  const [activeProfile, setActiveProfile] = useState(null);
+  const [selectedCollege, setSelectedCollege] = useState("all");
 
   // =========================
   // FETCH ANALYTICS
@@ -47,12 +49,14 @@ function AnalyticsPage() {
     // WARRIORS
 
 const {
-  data: activeProfile,
+  data: fetchedProfile,
 } = await supabase
   .from("profiles")
   .select("*")
   .eq("id", user.id)
   .single();
+
+setActiveProfile(fetchedProfile);
 
     // TASKS
     let taskQuery = supabase
@@ -62,12 +66,12 @@ const {
 
 
 if (
-  activeProfile?.role !== "admin"
+  fetchedProfile?.role !== "admin"
 ) {
 
   taskQuery = taskQuery.eq(
     "assigned_college_id",
-    activeProfile?.college_id
+    fetchedProfile?.college_id
   );
 
 }
@@ -95,13 +99,13 @@ let warriorQuery =
     );
 
 if (
-  activeProfile?.role !== "admin"
+  fetchedProfile?.role !== "admin"
 ) {
 
   warriorQuery =
     warriorQuery.eq(
       "college_id",
-      activeProfile?.college_id
+      fetchedProfile?.college_id
     );
 
 }
@@ -124,13 +128,13 @@ let teamQuery =
     .select("*");
 
 if (
-  activeProfile?.role !== "admin"
+  fetchedProfile?.role !== "admin"
 ) {
 
   teamQuery =
     teamQuery.eq(
       "college_id",
-      activeProfile?.college_id
+      fetchedProfile?.college_id
     );
 
 }
@@ -148,18 +152,18 @@ if (teamsData) {
 const {
   data: collegesData,
 } = await supabase
-  .from("colleges")
+    .from("colleges")
   .select("*")
   .order("name");
 
 if (collegesData) {
   setColleges(
-    activeProfile?.role === "admin"
+    fetchedProfile?.role === "admin"
       ? collegesData
       : collegesData.filter(
           (college) =>
             college.id ===
-            activeProfile?.college_id
+            fetchedProfile?.college_id
         )
   );
 }
@@ -203,30 +207,59 @@ setLoading(false);
   // =========================
 
   const metrics = useMemo(() => {
+    const collegeFilteredActivities =
+      activeProfile?.role === "admin" &&
+      selectedCollege !== "all"
+        ? activities.filter(
+            (activity) =>
+              activity.assigned_college_id ===
+              selectedCollege
+          )
+        : activities;
 
-    const total = activities.length;
+    const collegeFilteredWarriors =
+      activeProfile?.role === "admin" &&
+      selectedCollege !== "all"
+        ? warriors.filter(
+            (warrior) =>
+              warrior.college_id ===
+              selectedCollege
+          )
+        : warriors;
+
+    const collegeFilteredTeams =
+      activeProfile?.role === "admin" &&
+      selectedCollege !== "all"
+        ? teams.filter(
+            (team) =>
+              team.college_id ===
+              selectedCollege
+          )
+        : teams;
+
+    const total = collegeFilteredActivities.length;
 
     const completed =
-      activities.filter(
+      collegeFilteredActivities.filter(
         (a) =>
           a.status === "approved" ||
           a.status === "completed"
       ).length;
 
     const planned =
-      activities.filter(
+      collegeFilteredActivities.filter(
         (a) => a.status === "planned"
       ).length;
 
     const achievedStudents =
-      activities.reduce(
+      collegeFilteredActivities.reduce(
         (sum, a) =>
           sum + (a.audience_count || 0),
         0
       );
 
     const targetStudents =
-      activities.reduce(
+      collegeFilteredActivities.reduce(
         (sum, a) =>
           sum + (a.target_students || 0),
         0
@@ -254,18 +287,43 @@ setLoading(false);
       completionRate,
 
       totalWarriors:
-        warriors.length,
+        collegeFilteredWarriors.length,
 
       totalTeams:
-        teams.length,
+        collegeFilteredTeams.length,
 
     };
 
-  }, [activities, warriors, teams]);
+  }, [
+    activities,
+    activeProfile?.role,
+    selectedCollege,
+    teams,
+    warriors,
+  ]);
 
   const collegeWiseAnalytics = useMemo(() => {
-    return colleges.map((college) => {
-      const collegeTasks = activities.filter(
+    const analyticsSource =
+      activeProfile?.role === "admin" &&
+      selectedCollege !== "all"
+        ? activities.filter(
+            (activity) =>
+              activity.assigned_college_id ===
+              selectedCollege
+          )
+        : activities;
+
+    const visibleColleges =
+      activeProfile?.role === "admin" &&
+      selectedCollege !== "all"
+        ? colleges.filter(
+            (college) =>
+              college.id === selectedCollege
+          )
+        : colleges;
+
+    return visibleColleges.map((college) => {
+      const collegeTasks = analyticsSource.filter(
         (activity) =>
           activity.assigned_college_id ===
           college.id
@@ -299,7 +357,12 @@ setLoading(false);
               ),
       };
     });
-  }, [activities, colleges]);
+  }, [
+    activities,
+    activeProfile?.role,
+    colleges,
+    selectedCollege,
+  ]);
 
   // =========================
   // PIE CHART
@@ -308,7 +371,7 @@ setLoading(false);
   const monthlyActivityData = [
   {
     month: "May",
-    activities: activities.length,
+    activities: metrics.total,
   },
 ];
 
@@ -378,6 +441,14 @@ const weeklyReport = [
 ];
 
 activities.forEach((activity) => {
+  if (
+    activeProfile?.role === "admin" &&
+    selectedCollege !== "all" &&
+    activity.assigned_college_id !==
+      selectedCollege
+  ) {
+    return;
+  }
 
   const createdDate =
     new Date(activity.created_at);
@@ -473,6 +544,33 @@ weeklyReport.forEach((week) => {
         </p>
 
       </div>
+
+      {activeProfile?.role === "admin" && (
+        <div className="flex justify-end">
+          <select
+            value={selectedCollege}
+            onChange={(e) =>
+              setSelectedCollege(
+                e.target.value
+              )
+            }
+            className="min-w-[240px] rounded-2xl border border-cyan-500/40 bg-[#0B1120] px-5 py-3 text-white outline-none transition-all focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+          >
+            <option value="all">
+              All Colleges
+            </option>
+
+            {colleges.map((college) => (
+              <option
+                key={college.id}
+                value={college.id}
+              >
+                {college.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* KPI CARDS */}
 
