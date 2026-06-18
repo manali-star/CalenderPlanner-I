@@ -839,7 +839,7 @@ const handleReject = async (
     </h3>
 
     {/* Proof */}
-    
+    <a
       href={activity.proof_url}
       target="_blank"
       rel="noreferrer"
@@ -1571,7 +1571,7 @@ const { error: uploadError } =
                 </div>
               )}
 
-              
+              <a
                 href={activity.proof_url}
                 target="_blank"
                 rel="noreferrer"

@@ -25,6 +25,29 @@ import {
 
 import { supabase } from "../../lib/supabase";
 
+const COMPLETED_STATUSES = ["approved", "completed"];
+const PENDING_STATUSES = [
+  "planned",
+  "pending",
+  "submitted",
+  "pending_officer_review",
+  "awaiting_coordinator",
+  "returned_by_coordinator",
+  "revision_requested",
+];
+
+const isCompletedActivity = (activity) =>
+  COMPLETED_STATUSES.includes(activity.status);
+
+const isPendingActivity = (activity) =>
+  !isCompletedActivity(activity) &&
+  (PENDING_STATUSES.includes(activity.status) ||
+    !activity.status ||
+    activity.status === "rejected_by_officer");
+
+const isMassActivity = (activity) =>
+  activity.activity_type === "Mass Activity";
+
 function AnalyticsPage() {
 
   const [activities, setActivities] = useState([]);
@@ -241,14 +264,17 @@ setLoading(false);
 
     const completed =
       collegeFilteredActivities.filter(
-        (a) =>
-          a.status === "approved" ||
-          a.status === "completed"
+        isCompletedActivity
       ).length;
 
-    const planned =
+    const pending =
       collegeFilteredActivities.filter(
-        (a) => a.status === "planned"
+        isPendingActivity
+      ).length;
+
+    const massActivities =
+      collegeFilteredActivities.filter(
+        isMassActivity
       ).length;
 
     const achievedStudents =
@@ -279,7 +305,8 @@ setLoading(false);
 
       total,
       completed,
-      planned,
+      pending,
+      massActivities,
 
       achievedStudents,
       targetStudents,
@@ -329,11 +356,86 @@ setLoading(false);
           college.id
       );
 
+      const collegeTeams =
+        teams.filter(
+          (team) =>
+            team.college_id === college.id
+        );
+
       const completed = collegeTasks.filter(
-        (activity) =>
-          activity.status === "approved" ||
-          activity.status === "completed"
+        isCompletedActivity
       ).length;
+
+      const pending = collegeTasks.filter(
+        isPendingActivity
+      ).length;
+
+      const massActivities =
+        collegeTasks.filter(
+          isMassActivity
+        ).length;
+
+      const massActivitiesCompleted =
+        collegeTasks.filter(
+          (activity) =>
+            isMassActivity(activity) &&
+            isCompletedActivity(activity)
+        ).length;
+
+      const massActivitiesPending =
+        collegeTasks.filter(
+          (activity) =>
+            isMassActivity(activity) &&
+            isPendingActivity(activity)
+        ).length;
+
+      const teamBreakdown =
+        collegeTeams.map((team) => {
+          const teamTasks =
+            collegeTasks.filter(
+              (activity) =>
+                activity.assigned_team_id ===
+                team.id
+            );
+
+          return {
+            id: team.id,
+            name:
+              team.team_name ||
+              "Unnamed Team",
+            total:
+              teamTasks.length,
+            completed:
+              teamTasks.filter(
+                isCompletedActivity
+              ).length,
+            pending:
+              teamTasks.filter(
+                isPendingActivity
+              ).length,
+          };
+        });
+
+      const activeTeams =
+        teamBreakdown.filter(
+          (team) => team.total > 0
+        );
+
+      const topTeams =
+        [...teamBreakdown]
+          .sort((a, b) => {
+            if (
+              b.completed !== a.completed
+            ) {
+              return (
+                b.completed -
+                a.completed
+              );
+            }
+
+            return b.total - a.total;
+          })
+          .slice(0, 3);
 
       const outreach = collegeTasks.reduce(
         (sum, activity) =>
@@ -346,6 +448,14 @@ setLoading(false);
         name: college.name,
         total: collegeTasks.length,
         completed,
+        pending,
+        teamsCount: collegeTeams.length,
+        activeTeamsCount:
+          activeTeams.length,
+        massActivities,
+        massActivitiesCompleted,
+        massActivitiesPending,
+        topTeams,
         outreach,
         completionRate:
           collegeTasks.length === 0
@@ -362,6 +472,7 @@ setLoading(false);
     activeProfile?.role,
     colleges,
     selectedCollege,
+    teams,
   ]);
 
   // =========================
@@ -391,8 +502,8 @@ const participationData = [
     },
 
     {
-      name: "Planned",
-      value: metrics.planned
+      name: "Pending",
+      value: metrics.pending
     },
 
   ];
@@ -601,15 +712,21 @@ weeklyReport.forEach((week) => {
         />
 
         <AnalyticsStatCard
-          title="Target Students"
-          value={metrics.targetStudents}
+          title="Pending Tasks"
+          value={metrics.pending}
           icon={Clock3}
         />
 
         <AnalyticsStatCard
-          title="Achieved Students"
-          value={metrics.achievedStudents}
-          icon={Users}
+          title="Mass Activities"
+          value={metrics.massActivities}
+          icon={Activity}
+        />
+
+        <AnalyticsStatCard
+          title="Target Students"
+          value={metrics.targetStudents}
+          icon={Clock3}
         />
 
         <AnalyticsStatCard
@@ -622,6 +739,12 @@ weeklyReport.forEach((week) => {
           title="Completion %"
           value={`${metrics.completionRate}%`}
           icon={CheckCircle2}
+        />
+
+        <AnalyticsStatCard
+          title="Achieved Students"
+          value={metrics.achievedStudents}
+          icon={Users}
         />
 
       </div>
@@ -835,7 +958,7 @@ weeklyReport.forEach((week) => {
                     {college.name}
                   </h3>
                   <p className="text-sm text-gray-400 mt-1">
-                    {college.completed} completed of {college.total} tasks
+                    {college.completed} completed, {college.pending} pending from {college.total} assigned activities
                   </p>
                 </div>
                 <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-300">
@@ -843,7 +966,7 @@ weeklyReport.forEach((week) => {
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="rounded-xl bg-white/5 p-3">
                   <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
                     Total
@@ -864,11 +987,91 @@ weeklyReport.forEach((week) => {
 
                 <div className="rounded-xl bg-white/5 p-3">
                   <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Pending
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-amber-400">
+                    {college.pending}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Teams
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-cyan-400">
+                    {college.teamsCount}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Active Teams
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-sky-300">
+                    {college.activeTeamsCount}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                    Mass Activities
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-fuchsia-400">
+                    {college.massActivities}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
                     Reach
                   </p>
                   <p className="mt-2 text-2xl font-black text-cyan-400">
                     {college.outreach}
                   </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.25em] text-gray-500">
+                    College Activity Summary
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {college.massActivitiesCompleted} completed / {college.massActivitiesPending} pending mass activities
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-xs uppercase tracking-[0.25em] text-gray-500">
+                    Teams In This College
+                  </p>
+
+                  {college.topTeams.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      {college.topTeams.map((team) => (
+                        <div
+                          key={team.id}
+                          className="flex items-center justify-between rounded-xl bg-black/20 px-3 py-2"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              {team.name}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {team.completed} completed, {team.pending} pending
+                            </p>
+                          </div>
+                          <span className="text-sm font-black text-cyan-300">
+                            {team.total} total
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-gray-400">
+                      No team-linked activities yet for this college.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
