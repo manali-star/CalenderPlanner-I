@@ -74,16 +74,16 @@ function TasksPage() {
     fetchActivities(profileData);
   };
 
-const fetchActivities = async (userProfile) => {
+  const fetchActivities = async (userProfile) => {
 
-  const activeProfile =
-    userProfile || profile;
-  
-  if (!activeProfile) return;
+    const activeProfile =
+      userProfile || profile;
 
-  let query = supabase
-  .from("tasks")
-  .select(`
+    if (!activeProfile) return;
+
+    let query = supabase
+      .from("tasks")
+      .select(`
     id,
     title,
     description,
@@ -115,140 +115,140 @@ const fetchActivities = async (userProfile) => {
     proof_text
   `)
 
-  if (
-    activeProfile?.role?.toLowerCase() !== "admin"
-  ) {
+    if (
+      activeProfile?.role?.toLowerCase() !== "admin"
+    ) {
 
-    query = query.eq(
-      "assigned_college_id",
-      activeProfile.college_id
-    );
+      query = query.eq(
+        "assigned_college_id",
+        activeProfile.college_id
+      );
 
-  }
+    }
 
-if (activeProfile?.role?.toLowerCase() === "warrior") {
+    if (activeProfile?.role?.toLowerCase() === "warrior") {
 
-  // FIND WARRIOR TEAM
-  const { data: warriorTeam } =
-    await supabase
-      .from("team_members")
-      .select("team_id")
-      .eq("user_id", activeProfile.id)
-      .maybeSingle();
+      // FIND WARRIOR TEAM
+      const { data: warriorTeam } =
+        await supabase
+          .from("team_members")
+          .select("team_id")
+          .eq("user_id", activeProfile.id)
+          .maybeSingle();
 
-  if (warriorTeam) {
+      if (warriorTeam) {
 
-    query = query.eq(
-      "assigned_team_id",
-      warriorTeam.team_id
-    );
+        query = query.eq(
+          "assigned_team_id",
+          warriorTeam.team_id
+        );
 
-  } else {
+      } else {
 
-    query = query.is(
-      "assigned_team_id",
-      null
-    );
+        query = query.is(
+          "assigned_team_id",
+          null
+        );
 
-  }
-
-}
-
-  const { data, error } = await query.order("created_at", {
-    ascending: false,
-  });
-
-  if (error) {
-
-    toast.error(error.message);
-
-    return;
-
-  }
-
-  // FETCH TEAM NAMES
-  const updatedTasks = await Promise.all(
-    (data || []).map(async (task) => {
-      if (!task.assigned_team_id) {
-        return task;
       }
 
-      const { data: teamData } =
-        await supabase
-          .from("teams")
-          .select("team_name")
-          .eq(
-            "id",
-            task.assigned_team_id
-          )
-          .maybeSingle();
-      return {
-        ...task,
-        assigned_team_name: teamData?.team_name || "Unknown Team",
-      };
-    })
-  );
+    }
 
-const currentRole =
-  activeProfile?.role?.toLowerCase() || "";
-
-const allowedRoles = [
-  "officer",
-  "college_coordinator",
-  "president",
-  "admin",
-  "warrior",
-];
-
-if (allowedRoles.includes(currentRole)) {
-
-  const uniqueMassActivities = [];
-  const normalActivities = [];
-
-updatedTasks.forEach((task) => {
-
-  if (
-    task.activity_type ===
-    "Mass Activity"
-  ) {
-
-    uniqueMassActivities.push({
-
-      ...task,
-
-      assigned_team_name:
-        "All Teams",
-
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
     });
 
-  } else {
+    if (error) {
 
-    normalActivities.push(task);
+      toast.error(error.message);
 
-  }
+      return;
 
-  if (
-    task.status ===
-    "pending_officer_review"
-  ) {
+    }
 
-    task.needs_review = true;
+    // FETCH TEAM NAMES
+    const updatedTasks = await Promise.all(
+      (data || []).map(async (task) => {
+        if (!task.assigned_team_id) {
+          return task;
+        }
 
-  }
+        const { data: teamData } =
+          await supabase
+            .from("teams")
+            .select("team_name")
+            .eq(
+              "id",
+              task.assigned_team_id
+            )
+            .maybeSingle();
+        return {
+          ...task,
+          assigned_team_name: teamData?.team_name || "Unknown Team",
+        };
+      })
+    );
 
-});
+    const currentRole =
+      activeProfile?.role?.toLowerCase() || "";
 
-  setTasks([
-    ...uniqueMassActivities,
-    ...normalActivities,
-  ]);
+    const allowedRoles = [
+      "officer",
+      "college_coordinator",
+      "president",
+      "admin",
+      "warrior",
+    ];
 
-} else {
+    if (allowedRoles.includes(currentRole)) {
 
-  setTasks(updatedTasks);
+      const uniqueMassActivities = [];
+      const normalActivities = [];
 
-}
-};
+      updatedTasks.forEach((task) => {
+
+        if (
+          task.activity_type ===
+          "Mass Activity"
+        ) {
+
+          uniqueMassActivities.push({
+
+            ...task,
+
+            assigned_team_name:
+              "All Teams",
+
+          });
+
+        } else {
+
+          normalActivities.push(task);
+
+        }
+
+        if (
+          task.status ===
+          "pending_officer_review"
+        ) {
+
+          task.needs_review = true;
+
+        }
+
+      });
+
+      setTasks([
+        ...uniqueMassActivities,
+        ...normalActivities,
+      ]);
+
+    } else {
+
+      setTasks(updatedTasks);
+
+    }
+  };
 
   const filteredActivities = tasks.filter((activity) =>
     activity?.title
@@ -287,7 +287,7 @@ updatedTasks.forEach((task) => {
     <div className="h-screen overflow-y-auto bg-[#060b16] text-white p-4 overflow-x-hidden w-full min-w-0">
       <div className="flex items-center justify-between mb-6">
         <div>
-          
+
           <h1 className="text-2xl font-black">Activities</h1>
 
           <p className="text-gray-500 text-sm">
@@ -366,95 +366,93 @@ updatedTasks.forEach((task) => {
       </div>
 
       <AddActivityModal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  onCreateActivity={async (newActivity) => {
-const {
-  data: { user },
-} = await supabase.auth.getUser();
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreateActivity={async (newActivity) => {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
 
-if (!user) {
-  toast.error("Please log in again");
-  return;
-}
+          if (!user) {
+            toast.error("Please log in again");
+            return;
+          }
 
-const activities = Array.isArray(newActivity) ? newActivity : [newActivity];
+          const activities = Array.isArray(newActivity) ? newActivity : [newActivity];
 
-const resolveCollegeId = async (activity) => {
-  if (profile?.college_id) {
-    return profile.college_id;
-  }
+          const resolveCollegeId = async (activity) => {
+            if (profile?.college_id) {
+              return profile.college_id;
+            }
 
-  if (activity.assignment_type === "team" && activity.assigned_team_id) {
-    const { data: teamData } = await supabase
-      .from("teams")
-      .select("college_id")
-      .eq("id", activity.assigned_team_id)
-      .maybeSingle();
+            if (activity.assignment_type === "team" && activity.assigned_team_id) {
+              const { data: teamData } = await supabase
+                .from("teams")
+                .select("college_id")
+                .eq("id", activity.assigned_team_id)
+                .maybeSingle();
 
-    return teamData?.college_id || null;
-  }
+              return teamData?.college_id || null;
+            }
 
-  return null;
-};
+            return null;
+          };
 
-const activityPayload = await Promise.all(
-  activities.map(async (activity) => {
-    const resolvedCollegeId = await resolveCollegeId(activity);
+          const activityPayload = await Promise.all(
+            activities.map(async (activity) => {
+              const resolvedCollegeId = await resolveCollegeId(activity);
 
-    return {
-      title: activity.title,
-      activity_type: activity.activity_type,
-      activity_date: activity.start_date,
-      due_date: activity.end_date || activity.start_date,
-      venue: activity.location,
-      audience_count: Number(activity.participants) || 0,
-      target_students: Number(activity.target_students) || 0,
-      // ── CHANGE 3: priority field removed (no longer collected in AddActivityModal) ──
-      // ── CHANGE 4: description field removed (no longer collected in AddActivityModal) ──
-      assignment_type: "team",
-      assigned_to: null,
-      assigned_team_id:
-        activity.assigned_team_id || null,
-      assigned_college_id: resolvedCollegeId,
-      created_by: user.id,
-      status: "planned",
-      secretary_status: "pending",
-      activity_status: "pending",
-      media_status: "pending",
-      coordinator_approved: false,
-      president_approved: false,
-      secretary_approved: false,
-      activity_approved: false,
-      media_approved: false,
-      proof_text: "",
-      remarks: "",
-    };
-  })
-);
+              return {
+                title: activity.title,
+                activity_type: activity.activity_type,
+                activity_date: activity.start_date,
+                due_date: activity.end_date || activity.start_date,
+                venue: activity.location,
+                audience_count: Number(activity.participants) || 0,
+                target_students: Number(activity.target_students) || 0,
+                assignment_type: "team",
+                assigned_to: null,
+                assigned_team_id:
+                  activity.assigned_team_id || null,
+                assigned_college_id: resolvedCollegeId,
+                created_by: user.id,
+                status: "planned",
+                secretary_status: "pending",
+                activity_status: "pending",
+                media_status: "pending",
+                coordinator_approved: false,
+                president_approved: false,
+                secretary_approved: false,
+                activity_approved: false,
+                media_approved: false,
+                proof_text: "",
+                remarks: "",
+              };
+            })
+          );
 
-if (activityPayload.some((activity) => !activity.assigned_college_id)) {
-  toast.error("Unable to determine a college for this activity");
-  return;
-}
+          if (activityPayload.some((activity) => !activity.assigned_college_id)) {
+            toast.error("Unable to determine a college for this activity");
+            return;
+          }
 
-const { error: insertError } = await supabase
-  .from("tasks")
-  .insert(activityPayload);
+          const { error: insertError } = await supabase
+            .from("tasks")
+            .insert(activityPayload);
 
-    if (insertError) {
-      console.log(insertError);
-      toast.error(insertError.message);
-      return;
-    }
+          if (insertError) {
+            console.log(insertError);
+            toast.error(insertError.message);
+            return;
+          }
 
-    toast.success("Activity Created");
+          toast.success("Activity Created");
 
-    await fetchActivities(profile);
+          await fetchActivities(profile);
 
-    setIsModalOpen(false);
-  }}
-/>
+          setIsModalOpen(false);
+        }}
+      />
     </div>
   );
 }
@@ -504,142 +502,116 @@ function ActivityCard({
   const isWarrior =
     profile?.role?.toLowerCase() === "warrior";
 
-    const [proofText, setProofText] =
-      useState("");
+  const [proofText, setProofText] =
+    useState("");
 
-    const [uploading, setUploading] =
-      useState(false);
+  const [uploading, setUploading] =
+    useState(false);
 
-    const [proofFile, setProofFile] =
-      useState(null);
+  const [proofFile, setProofFile] =
+    useState(null);
 
-    const [massRemarks, setMassRemarks] =
-      useState(activity.remarks || "");
+  const [massRemarks, setMassRemarks] =
+    useState(activity.remarks || "");
 
-    const [massAudienceCount, setMassAudienceCount] =
-      useState(activity.audience_count || "");
+  const [massAudienceCount, setMassAudienceCount] =
+    useState(activity.audience_count || "");
 
-const handleApprove = async (role) => {
-  const expectedPassword =
-    OFFICER_PASSWORDS[role];
+  const handleApprove = async (role) => {
+    const expectedPassword =
+      OFFICER_PASSWORDS[role];
 
-  if (expectedPassword) {
-    const enteredPassword = prompt(
-      `Enter ${role[0].toUpperCase()}${role.slice(1)} Password`
-    );
+    if (expectedPassword) {
+      const enteredPassword = prompt(
+        `Enter ${role[0].toUpperCase()}${role.slice(1)} Password`
+      );
 
-    if (enteredPassword !== expectedPassword) {
-      toast.error("Wrong Password");
+      if (enteredPassword !== expectedPassword) {
+        toast.error("Wrong Password");
+        return;
+      }
+    }
+
+    let updates = {};
+
+    if (role === "secretary") {
+      updates = {
+        secretary_approved: true,
+        secretary_status: "approved",
+      };
+    }
+
+    if (role === "activity") {
+      updates = {
+        activity_approved: true,
+        activity_status: "approved",
+      };
+    }
+
+    if (role === "media") {
+      updates = {
+        media_approved: true,
+        media_status: "approved",
+      };
+    }
+
+    if (role === "president") {
+      updates = {
+        president_approved: true,
+        status: "awaiting_coordinator",
+      };
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", activity.id);
+
+    if (error) {
+      toast.error(error.message);
       return;
     }
-  }
 
-  let updates = {};
+    toast.success(`${role} approval completed`);
 
-  // Secretary
-  if (role === "secretary") {
+    fetchActivities();
 
-    updates = {
-      secretary_approved: true,
-      secretary_status: "approved",
-    };
+  };
 
-  }
+  const handleReject = async (
+    role,
+    reason = "Rejected"
+  ) => {
 
-  // Activity Director
-  if (role === "activity") {
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        status: "rejected_by_officer",
+        rejection_reason: reason,
+        rejected_by: role,
+        secretary_approved: false,
+        secretary_status: "pending",
+        activity_approved: false,
+        activity_status: "pending",
+        media_approved: false,
+        media_status: "pending",
+        president_approved: false,
+        proof_url: null,
+        // ── CHANGE 1: clear timestamp on rejection so warrior gets a fresh one on resubmit ──
+        completion_date: null,
+      })
+      .eq("id", activity.id);
 
-    updates = {
-      activity_approved: true,
-      activity_status: "approved",
-    };
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
 
-  }
+    toast.success("Task Rejected");
 
-  // Media Director
-  if (role === "media") {
+    fetchActivities();
 
-    updates = {
-      media_approved: true,
-      media_status: "approved",
-    };
-
-  }
-
-  // President
-  if (role === "president") {
-
-    updates = {
-      president_approved: true,
-      status: "awaiting_coordinator",
-    };
-
-  }
-
-  const { error } = await supabase
-    .from("tasks")
-    .update(updates)
-    .eq("id", activity.id);
-
-  if (error) {
-
-    toast.error(error.message);
-    return;
-
-  }
-
-  toast.success(`${role} approval completed`);
-
-  fetchActivities();
-
-};
-
-const handleReject = async (
-  role,
-  reason = "Rejected"
-) => {
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({
-
-      status: "rejected_by_officer",
-
-      rejection_reason: reason,
-
-      rejected_by: role,
-
-      secretary_approved: false,
-      secretary_status: "pending",
-
-      activity_approved: false,
-      activity_status: "pending",
-
-      media_approved: false,
-      media_status: "pending",
-
-      president_approved: false,
-
-      proof_url: null,
-
-      // ── CHANGE 1: clear submission timestamp on rejection — warrior must resubmit ──
-      completion_date: null,
-
-    })
-    .eq("id", activity.id);
-
-  if (error) {
-
-    toast.error(error.message);
-    return;
-
-  }
-
-  toast.success("Task Rejected");
-
-  fetchActivities();
-
-};
+  };
 
   const workflow = [
     {
@@ -664,25 +636,25 @@ const handleReject = async (
     },
 
     {
-  label: "President",
+      label: "President",
 
-  value:
-    activity.president_approved
-      ? "approved"
-      : activity.secretary_approved &&
-        activity.activity_approved &&
-        activity.media_approved
-      ? "ready"
-      : "locked",
-},
+      value:
+        activity.president_approved
+          ? "approved"
+          : activity.secretary_approved &&
+            activity.activity_approved &&
+            activity.media_approved
+            ? "ready"
+            : "locked",
+    },
   ];
 
   const daysLeft = activity.activity_date
-  ? Math.ceil(
+    ? Math.ceil(
       (new Date(activity.activity_date) - new Date()) /
       (1000 * 60 * 60 * 24)
     )
-  : null;
+    : null;
 
   return (
     <motion.div
@@ -721,8 +693,6 @@ const handleReject = async (
             {activity.status || "Assigned"}
           </div>
         </div>
-
-    
 
         <div className="bg-black/20 border border-white/5 rounded-xl p-3 mb-4">
           <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 font-black mb-4">
@@ -763,8 +733,6 @@ const handleReject = async (
               </div>
             ))}
           </div>
-
-
         </div>
 
         <div className="space-y-2 text-sm mb-4 text-gray-300">
@@ -792,58 +760,57 @@ const handleReject = async (
           </div>
         </div>
 
-         <div className="pt-2 border-t border-white/5 flex justify-between items-center">
-            <span className="text-red-400/80 font-medium">
-              Assigned: {
-                activity.assignment_type === "team"
-                  ? activity.assigned_team_name || "Unknown Team"
-                  : activity.assigned_user_name || "Warrior"
-              }
-            </span>
+        <div className="pt-2 border-t border-white/5 flex justify-between items-center">
+          <span className="text-red-400/80 font-medium">
+            Assigned: {
+              activity.assignment_type === "team"
+                ? activity.assigned_team_name || "Unknown Team"
+                : activity.assigned_user_name || "Warrior"
+            }
+          </span>
 
-            {daysLeft !== null && (
-              <span
-                className={`font-bold ${
-                  daysLeft < 0
-                    ? "text-red-500"
-                    : "text-green-500"
+          {daysLeft !== null && (
+            <span
+              className={`font-bold ${daysLeft < 0
+                  ? "text-red-500"
+                  : "text-green-500"
                 }`}
-              >
-                {daysLeft < 0
-                  ? "Overdue"
-                  : `${daysLeft}d left`}
-              </span>
-            )}
-          </div>  
+            >
+              {daysLeft < 0
+                ? "Overdue"
+                : `${daysLeft}d left`}
+            </span>
+          )}
+        </div>
 
-{isOfficer && (
+        {isOfficer && (
 
-  activity.status ===
-    "pending_officer_review"
+          activity.status ===
+          "pending_officer_review"
 
-  ||
+          ||
 
-  activity.status ===
-    "returned_by_coordinator"
+          activity.status ===
+          "returned_by_coordinator"
 
-) && (
+        ) && (
 
-  <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-white/5 p-5">
+            <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-white/5 p-5">
 
-    <p className="text-xs tracking-[0.3em] text-yellow-400 font-bold uppercase">
-      Officer Review Panel
-    </p>
+              <p className="text-xs tracking-[0.3em] text-yellow-400 font-bold uppercase">
+                Officer Review Panel
+              </p>
 
-    <h3 className="text-2xl font-black text-white mt-2 mb-5">
-      Multi-level Verification
-    </h3>
+              <h3 className="text-2xl font-black text-white mt-2 mb-5">
+                Multi-level Verification
+              </h3>
 
-    {/* Proof */}
-    <a
-      href={activity.proof_url}
-      target="_blank"
-      rel="noreferrer"
-      className="
+              {/* Proof link */}
+              <a
+                href={activity.proof_url}
+                target="_blank"
+                rel="noreferrer"
+                className="
         inline-flex
         items-center
         justify-center
@@ -857,51 +824,50 @@ const handleReject = async (
         font-bold
         mb-3
       "
-    >
-      View Proof
-    </a>
+              >
+                View Proof
+              </a>
 
-    {/* ── CHANGE 1: Submission timestamp visible to reviewing officers ── */}
-    {activity.completion_date && (
-      <div className="flex items-center gap-2 mb-5 px-4 py-3 rounded-xl bg-black/20 border border-yellow-500/10">
-        <Clock size={14} className="text-yellow-400 shrink-0" />
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">Submitted On</p>
-          <p className="text-yellow-300 text-sm font-semibold">
-            {formatSubmissionDate(activity.completion_date)}
-          </p>
-        </div>
-      </div>
-    )}
+              {/* ── CHANGE 1: Submission timestamp visible to reviewing officers ── */}
+              {activity.completion_date && (
+                <div className="flex items-center gap-2 mb-5 px-4 py-3 rounded-xl bg-black/20 border border-yellow-500/10">
+                  <Clock size={14} className="text-yellow-400 shrink-0" />
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">Submitted On</p>
+                    <p className="text-yellow-300 text-sm font-semibold">
+                      {formatSubmissionDate(activity.completion_date)}
+                    </p>
+                  </div>
+                </div>
+              )}
 
+              {!(
+                activity.secretary_approved &&
+                activity.activity_approved &&
+                activity.media_approved
+              ) && (
+                  <>
 
-    {!(
-  activity.secretary_approved &&
-  activity.activity_approved &&
-  activity.media_approved
-) && (
-  <>
+                    {/* Secretary */}
+                    <div className="flex items-center justify-between rounded-2xl bg-black/20 border border-white/5 p-4 mb-4">
 
-    {/* Secretary */}
-    <div className="flex items-center justify-between rounded-2xl bg-black/20 border border-white/5 p-4 mb-4">
+                      <div>
+                        <p className="text-white font-bold">
+                          Secretary Approval
+                        </p>
 
-  <div>
-    <p className="text-white font-bold">
-      Secretary Approval
-    </p>
+                        <p className="text-sm text-zinc-400">
+                          Status: {
+                            activity.secretary_approved
+                              ? "approved"
+                              : "pending"
+                          }
+                        </p>
+                      </div>
 
-    <p className="text-sm text-zinc-400">
-      Status: {
-        activity.secretary_approved
-          ? "approved"
-          : "pending"
-      }
-    </p>
-  </div>
+                      {activity.secretary_approved ? (
 
-  {activity.secretary_approved ? (
-
-    <div className="
+                        <div className="
       px-4
       py-2
       rounded-xl
@@ -911,16 +877,16 @@ const handleReject = async (
       text-emerald-400
       font-bold
     ">
-      ✓ Approved
-    </div>
+                          ✓ Approved
+                        </div>
 
-  ) : (
+                      ) : (
 
-    <div className="flex gap-3">
+                        <div className="flex gap-3">
 
-      <button
-        onClick={() => handleApprove("secretary")}
-        className="
+                          <button
+                            onClick={() => handleApprove("secretary")}
+                            className="
           px-5
           py-2
           rounded-xl
@@ -930,115 +896,17 @@ const handleReject = async (
           text-emerald-400
           font-bold
         "
-      >
-        Approve
-      </button>
+                          >
+                            Approve
+                          </button>
 
-      <button
-
-  onClick={() => {
-
-  const reason = prompt(
-    "Enter rejection reason"
-  );
-
-  if (!reason) return;
-
-  handleReject(
-    "secretary",
-    reason
-  );
-
-}}
-
-  className="
-    px-5
-    py-2
-    rounded-xl
-    bg-red-500/20
-    border
-    border-red-500/30
-    text-red-400
-    font-bold
-  "
->
-  Reject
-</button>
-
-    </div>
-
-  )}
-
-</div>
-
-    {/* Activity Director */}
-<div className="flex items-center justify-between rounded-2xl bg-black/20 border border-white/5 p-4 mb-4">
-
-  <div>
-    <p className="text-white font-bold">
-      Activity Approval
-    </p>
-
-    <p className="text-sm text-zinc-400">
-      Status: {
-        activity.activity_approved
-          ? "approved"
-          : "pending"
-      }
-    </p>
-  </div>
-
-  {activity.activity_approved ? (
-
-    <div className="
-      px-4
-      py-2
-      rounded-xl
-      bg-emerald-500/20
-      border
-      border-emerald-500/30
-      text-emerald-400
-      font-bold
-    ">
-      ✓ Approved
-    </div>
-
-  ) : (
-
-    <div className="flex gap-3">
-
-      <button
-        onClick={() => handleApprove("activity")}
-        className="
-          px-5
-          py-2
-          rounded-xl
-          bg-emerald-500/20
-          border
-          border-emerald-500/30
-          text-emerald-400
-          font-bold
-        "
-      >
-        Approve
-      </button>
-
-      <button
-        onClick={() => {
-
-  const reason = prompt(
-    "Enter rejection reason"
-  );
-
-  if (!reason) return;
-
-  handleReject(
-    "activity",
-    reason
-  );
-
-}}
-        className="
+                          <button
+                            onClick={() => {
+                              const reason = prompt("Enter rejection reason");
+                              if (!reason) return;
+                              handleReject("secretary", reason);
+                            }}
+                            className="
           px-5
           py-2
           rounded-xl
@@ -1048,36 +916,36 @@ const handleReject = async (
           text-red-400
           font-bold
         "
-      >
-        Reject
-      </button>
+                          >
+                            Reject
+                          </button>
 
-    </div>
+                        </div>
 
-  )}
+                      )}
 
-</div>
+                    </div>
 
-    {/* Media Director */}
-<div className="flex items-center justify-between rounded-2xl bg-black/20 border border-white/5 p-4 mb-4">
+                    {/* Activity Director */}
+                    <div className="flex items-center justify-between rounded-2xl bg-black/20 border border-white/5 p-4 mb-4">
 
-  <div>
-    <p className="text-white font-bold">
-      Media Approval
-    </p>
+                      <div>
+                        <p className="text-white font-bold">
+                          Activity Approval
+                        </p>
 
-    <p className="text-sm text-zinc-400">
-      Status: {
-        activity.media_approved
-          ? "approved"
-          : "pending"
-      }
-    </p>
-  </div>
+                        <p className="text-sm text-zinc-400">
+                          Status: {
+                            activity.activity_approved
+                              ? "approved"
+                              : "pending"
+                          }
+                        </p>
+                      </div>
 
-  {activity.media_approved ? (
+                      {activity.activity_approved ? (
 
-    <div className="
+                        <div className="
       px-4
       py-2
       rounded-xl
@@ -1087,16 +955,16 @@ const handleReject = async (
       text-emerald-400
       font-bold
     ">
-      ✓ Approved
-    </div>
+                          ✓ Approved
+                        </div>
 
-  ) : (
+                      ) : (
 
-    <div className="flex gap-3">
+                        <div className="flex gap-3">
 
-      <button
-        onClick={() => handleApprove("media")}
-        className="
+                          <button
+                            onClick={() => handleApprove("activity")}
+                            className="
           px-5
           py-2
           rounded-xl
@@ -1106,26 +974,17 @@ const handleReject = async (
           text-emerald-400
           font-bold
         "
-      >
-        Approve
-      </button>
+                          >
+                            Approve
+                          </button>
 
-      <button
-        onClick={() => {
-
-  const reason = prompt(
-    "Enter rejection reason"
-  );
-
-  if (!reason) return;
-
-  handleReject(
-    "media",
-    reason
-  );
-
-}}
-        className="
+                          <button
+                            onClick={() => {
+                              const reason = prompt("Enter rejection reason");
+                              if (!reason) return;
+                              handleReject("activity", reason);
+                            }}
+                            className="
           px-5
           py-2
           rounded-xl
@@ -1135,65 +994,143 @@ const handleReject = async (
           text-red-400
           font-bold
         "
-      >
-        Reject
-      </button>
+                          >
+                            Reject
+                          </button>
 
-    </div>
+                        </div>
 
-  )}
+                      )}
 
-</div>
-  </>
-)}
-    {/* PRESIDENT PANEL */}
-    {activity.secretary_approved &&
-      activity.activity_approved &&
-      activity.media_approved && (
+                    </div>
 
-      <div className="flex items-center justify-between rounded-2xl bg-black/20 border border-emerald-500/20 p-4">
+                    {/* Media Director */}
+                    <div className="flex items-center justify-between rounded-2xl bg-black/20 border border-white/5 p-4 mb-4">
 
-        <div>
-          <p className="text-white font-bold">
-            President Final Approval
-          </p>
+                      <div>
+                        <p className="text-white font-bold">
+                          Media Approval
+                        </p>
 
-          <p className="text-sm text-zinc-400">
-            All 3 Officers approved
-          </p>
-        </div>
+                        <p className="text-sm text-zinc-400">
+                          Status: {
+                            activity.media_approved
+                              ? "approved"
+                              : "pending"
+                          }
+                        </p>
+                      </div>
 
-        <div className="flex gap-3">
+                      {activity.media_approved ? (
 
-      <button
-            onClick={() => handleApprove("president")}
-            className="px-5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold"
-          >
-            Approve
-          </button>
+                        <div className="
+      px-4
+      py-2
+      rounded-xl
+      bg-emerald-500/20
+      border
+      border-emerald-500/30
+      text-emerald-400
+      font-bold
+    ">
+                          ✓ Approved
+                        </div>
 
-          <button
-            className="px-5 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 font-bold"
-          >
-            Reject
-          </button>
+                      ) : (
 
-        </div>
+                        <div className="flex gap-3">
 
-      </div>
+                          <button
+                            onClick={() => handleApprove("media")}
+                            className="
+          px-5
+          py-2
+          rounded-xl
+          bg-emerald-500/20
+          border
+          border-emerald-500/30
+          text-emerald-400
+          font-bold
+        "
+                          >
+                            Approve
+                          </button>
 
-    )}
+                          <button
+                            onClick={() => {
+                              const reason = prompt("Enter rejection reason");
+                              if (!reason) return;
+                              handleReject("media", reason);
+                            }}
+                            className="
+          px-5
+          py-2
+          rounded-xl
+          bg-red-500/20
+          border
+          border-red-500/30
+          text-red-400
+          font-bold
+        "
+                          >
+                            Reject
+                          </button>
 
-  </div>
+                        </div>
 
-)}
+                      )}
 
-{/* COORDINATOR PANEL */}
+                    </div>
+                  </>
+                )}
+              {/* PRESIDENT PANEL */}
+              {activity.secretary_approved &&
+                activity.activity_approved &&
+                activity.media_approved && (
 
-{activity.status ===
-  "awaiting_coordinator" && (
+                  <div className="flex items-center justify-between rounded-2xl bg-black/20 border border-emerald-500/20 p-4">
 
-  <div className="
+                    <div>
+                      <p className="text-white font-bold">
+                        President Final Approval
+                      </p>
+
+                      <p className="text-sm text-zinc-400">
+                        All 3 Officers approved
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+
+                      <button
+                        onClick={() => handleApprove("president")}
+                        className="px-5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold"
+                      >
+                        Approve
+                      </button>
+
+                      <button
+                        className="px-5 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 font-bold"
+                      >
+                        Reject
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+            </div>
+
+          )}
+
+        {/* COORDINATOR PANEL */}
+
+        {activity.status ===
+          "awaiting_coordinator" && (
+
+            <div className="
     mt-6
     rounded-3xl
     border
@@ -1202,7 +1139,7 @@ const handleReject = async (
     p-6
   ">
 
-    <p className="
+              <p className="
       text-xs
       tracking-[0.3em]
       text-cyan-400
@@ -1210,54 +1147,47 @@ const handleReject = async (
       uppercase
       mb-2
     ">
-      Coordinator Review
-    </p>
+                Coordinator Review
+              </p>
 
-    <h3 className="
+              <h3 className="
       text-2xl
       font-black
       text-white
       mb-6
     ">
-      Final College Verification
-    </h3>
+                Final College Verification
+              </h3>
 
-    <div className="flex gap-4">
+              <div className="flex gap-4">
 
-      {/* APPROVE */}
+                {/* APPROVE */}
 
-      <button
+                <button
 
-        onClick={async () => {
+                  onClick={async () => {
 
-          const { error } =
-            await supabase
-              .from("tasks")
-              .update({
+                    const { error } =
+                      await supabase
+                        .from("tasks")
+                        .update({
+                          status: "completed",
+                          coordinator_approved: true,
+                        })
+                        .eq("id", activity.id);
 
-                status: "completed",
+                    if (error) {
+                      toast.error(error.message);
+                      return;
+                    }
 
-                coordinator_approved: true,
+                    toast.success("Task Approved");
 
-              })
-              .eq("id", activity.id);
+                    fetchActivities();
 
-          if (error) {
+                  }}
 
-            toast.error(error.message);
-            return;
-
-          }
-
-          toast.success(
-            "Task Approved"
-          );
-
-          fetchActivities();
-
-        }}
-
-        className="
+                  className="
           px-6
           py-3
           rounded-2xl
@@ -1267,61 +1197,46 @@ const handleReject = async (
           text-emerald-400
           font-bold
         "
-      >
-        Final Approve
-      </button>
+                >
+                  Final Approve
+                </button>
 
-      {/* REJECT */}
+                {/* REJECT */}
 
-      <button
+                <button
 
-        onClick={async () => {
-          const reason = prompt(
-  "Enter rejection reason"
-);
+                  onClick={async () => {
+                    const reason = prompt("Enter rejection reason");
+                    if (!reason) return;
 
-if (!reason) return;
+                    const { error } =
+                      await supabase
+                        .from("tasks")
+                        .update({
+                          status: "returned_by_coordinator",
+                          coordinator_feedback: reason,
+                          secretary_approved: false,
+                          secretary_status: "pending",
+                          activity_approved: false,
+                          activity_status: "pending",
+                          media_approved: false,
+                          media_status: "pending",
+                          president_approved: false,
+                        })
+                        .eq("id", activity.id);
 
-          const { error } =
-            await supabase
-              .from("tasks")
-              .update({
+                    if (error) {
+                      toast.error(error.message);
+                      return;
+                    }
 
-                status:
-                  "returned_by_coordinator",
+                    toast.success("Returned To Officers");
 
-                  coordinator_feedback: reason,
+                    fetchActivities();
 
-                  secretary_approved: false,
-                  secretary_status: "pending",
+                  }}
 
-                  activity_approved: false,
-                  activity_status: "pending",
-
-                  media_approved: false,
-                  media_status: "pending",
-
-                  president_approved: false,
-
-              })
-              .eq("id", activity.id);
-
-          if (error) {
-
-            toast.error(error.message);
-            return;
-
-          }
-
-          toast.success(
-            "Returned To Officers"
-          );
-
-          fetchActivities();
-
-        }}
-
-        className="
+                  className="
           px-6
           py-3
           rounded-2xl
@@ -1331,101 +1246,101 @@ if (!reason) return;
           text-red-400
           font-bold
         "
-      >
-        Reject
-      </button>
-
-    </div>
-
-  </div>
-
-)}
-
-           {isWarrior &&
-            !activity.proof_url &&
-            activity.status !== "completed" &&
-            activity.activity_type !==
-              "Mass Activity" && (
-          <div className="bg-gradient-to-br from-pink-500/5 to-cyan-500/5 border border-pink-500/20 rounded-xl p-3">
-            <p className="text-[9px] uppercase tracking-[0.3em] text-pink-400 font-black mb-3">
-              Mission Submission
-            </p>
-
-            <h3 className="text-lg font-black mb-3">
-              Upload Completion Proof
-            </h3>
-
-            <div className="mb-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-cyan-300 font-black mb-2">
-                Proof Requirements
-              </p>
-              <p className="text-sm text-gray-300">
-                {PROOF_REQUIREMENTS_TEXT}
-              </p>
-            </div>
-
-            <label className="block cursor-pointer">
-
-              <input
-                type="file"
-                hidden
-                onChange={(e) =>
-                  setProofFile(e.target.files[0])
-                }
-              />
-
-              <div className="bg-[#0f172a] border border-dashed border-pink-500/20 rounded-xl p-4 text-center mb-4 hover:border-pink-500/50 transition-all">
-
-                <div className="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mx-auto mb-3">
-                  📄
-                </div>
-
-                <p className="text-lg font-bold mb-1">
-                  {
-                    proofFile
-                      ? proofFile.name
-                      : "Click to Upload Proof"
-                  }
-                </p>
-
-                <p className="text-gray-500 text-sm">
-                  PDF, Images, Docs
-                </p>
+                >
+                  Reject
+                </button>
 
               </div>
 
-            </label>
+            </div>
 
-            <input
-              type="number"
-              placeholder="Enter Students Reached"
+          )}
 
-              defaultValue={
-                activity.audience_count || ""
-              }
+        {isWarrior &&
+          !activity.proof_url &&
+          activity.status !== "completed" &&
+          activity.activity_type !==
+          "Mass Activity" && (
+            <div className="bg-gradient-to-br from-pink-500/5 to-cyan-500/5 border border-pink-500/20 rounded-xl p-3">
+              <p className="text-[9px] uppercase tracking-[0.3em] text-pink-400 font-black mb-3">
+                Mission Submission
+              </p>
 
-              onChange={(e) => {
+              <h3 className="text-lg font-black mb-3">
+                Upload Completion Proof
+              </h3>
 
-                const updatedValue =
-                  e.target.value;
+              <div className="mb-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-cyan-300 font-black mb-2">
+                  Proof Requirements
+                </p>
+                <p className="text-sm text-gray-300">
+                  {PROOF_REQUIREMENTS_TEXT}
+                </p>
+              </div>
 
-                setTasks((prev) =>
-                  prev.map((item) =>
+              <label className="block cursor-pointer">
 
-                    item.id === activity.id
-                      ? {
+                <input
+                  type="file"
+                  hidden
+                  onChange={(e) =>
+                    setProofFile(e.target.files[0])
+                  }
+                />
+
+                <div className="bg-[#0f172a] border border-dashed border-pink-500/20 rounded-xl p-4 text-center mb-4 hover:border-pink-500/50 transition-all">
+
+                  <div className="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mx-auto mb-3">
+                    📄
+                  </div>
+
+                  <p className="text-lg font-bold mb-1">
+                    {
+                      proofFile
+                        ? proofFile.name
+                        : "Click to Upload Proof"
+                    }
+                  </p>
+
+                  <p className="text-gray-500 text-sm">
+                    PDF, Images, Docs
+                  </p>
+
+                </div>
+
+              </label>
+
+              <input
+                type="number"
+                placeholder="Enter Students Reached"
+
+                defaultValue={
+                  activity.audience_count || ""
+                }
+
+                onChange={(e) => {
+
+                  const updatedValue =
+                    e.target.value;
+
+                  setTasks((prev) =>
+                    prev.map((item) =>
+
+                      item.id === activity.id
+                        ? {
                           ...item,
                           audience_count:
                             updatedValue,
                         }
-                      : item
+                        : item
 
-                  )
-                );
+                    )
+                  );
 
-              }}
+                }}
 
-              className="
+                className="
                 w-full
                 bg-black/20
                 border
@@ -1435,118 +1350,95 @@ if (!reason) return;
                 text-white
                 mb-4
               "
-            />
+              />
 
-            <textarea
-            value={proofText}
-              onChange={(e) =>
-                setProofText(e.target.value)
-              }
-              placeholder="Describe your work, add links, notes..."
-              className="w-full bg-[#111827] border border-white/5 rounded-xl p-3 text-white outline-none focus:border-pink-500/30 min-h-[90px] mb-4 text-sm"
-            />
+              <textarea
+                value={proofText}
+                onChange={(e) =>
+                  setProofText(e.target.value)
+                }
+                placeholder="Describe your work, add links, notes..."
+                className="w-full bg-[#111827] border border-white/5 rounded-xl p-3 text-white outline-none focus:border-pink-500/30 min-h-[90px] mb-4 text-sm"
+              />
 
-            <button
+              <button
 
-  onClick={async () => {
+                onClick={async () => {
 
-    if (!proofFile) {
+                  if (!proofFile) {
+                    toast.error("Please select proof file");
+                    return;
+                  }
 
-      toast.error(
-        "Please select proof file"
-      );
+                  const cleanName =
+                    proofFile.name.replace(
+                      /[^a-zA-Z0-9.]/g,
+                      "_"
+                    );
 
-      return;
+                  const fileExt =
+                    cleanName.split(".").pop();
 
-    }
+                  const fileName =
+                    `${Date.now()}-${Math.random()
+                      .toString(36)
+                      .substring(2)}.${fileExt}`;
 
-    const cleanName =
-  proofFile.name.replace(
-    /[^a-zA-Z0-9.]/g,
-    "_"
-  );
+                  const filePath =
+                    `proofs/${fileName}`;
 
-const fileExt =
-  cleanName.split(".").pop();
+                  // UPLOAD FILE
+                  const { error: uploadError } =
+                    await supabase.storage
+                      .from("activity-proofs")
+                      .upload(filePath, proofFile);
 
-const fileName =
-  `${Date.now()}-${Math.random()
-    .toString(36)
-    .substring(2)}.${fileExt}`;
+                  if (uploadError) {
+                    toast.error("Upload failed");
+                    return;
+                  }
 
-const filePath =
-  `proofs/${fileName}`;
+                  // GET PUBLIC URL
+                  const { data } =
+                    supabase.storage
+                      .from("activity-proofs")
+                      .getPublicUrl(filePath);
 
-// UPLOAD FILE
-const { error: uploadError } =
-  await supabase.storage
-    .from("activity-proofs")
-    .upload(filePath, proofFile);
+                  // ── CHANGE 1: record exact submission timestamp when warrior submits proof ──
+                  const { error } =
+                    await supabase
+                      .from("tasks")
+                      .update({
+                        proof_url:
+                          data?.publicUrl || "",
+                        proof_text:
+                          proofText,
+                        status:
+                          "pending_officer_review",
+                        completion_date:
+                          new Date().toISOString(),
+                      })
+                      .eq("id", activity.id);
 
-    if (uploadError) {
+                  if (error) {
+                    toast.error("Failed to submit proof");
+                    return;
+                  }
 
-      toast.error("Upload failed");
+                  toast.success("Proof Submitted");
 
-      return;
+                  await refresh(profile);
 
-    }
+                }}
 
-    // GET PUBLIC URL
-    const { data } =
-      supabase.storage
-        .from("activity-proofs")
-        .getPublicUrl(filePath);
+                className="w-full py-2 rounded-xl bg-gradient-to-r from-pink-500 to-red-500 font-black text-sm hover:scale-[1.01] transition-all"
+              >
+                Submit Proof →
+              </button>
+            </div>
+          )}
 
-    // UPDATE TASK
-    const { error } =
-      await supabase
-        .from("tasks")
-        .update({
-
-          proof_url:
-            data?.publicUrl || "",
-
-          proof_text:
-            proofText,
-
-          status:
-            "pending_officer_review",
-
-          // ── CHANGE 1: record exact submission timestamp ──
-          completion_date:
-            new Date().toISOString(),
-
-        })
-        .eq("id", activity.id);
-
-    if (error) {
-
-      toast.error(
-        "Failed to submit proof"
-      );
-
-      return;
-
-    }
-
-    toast.success(
-      "Proof Submitted"
-    );
-
-    await refresh(profile);
-
-  }}
-
-  
-
-  className="w-full py-2 rounded-xl bg-gradient-to-r from-pink-500 to-red-500 font-black text-sm hover:scale-[1.01] transition-all"
->
-  Submit Proof →
-</button>
-          </div>
-        )}
-
-        {/* ── CHANGE 1: "Proof Submitted" panel for warrior — shows submission timestamp ── */}
+        {/* ── CHANGE 1: "Proof Submitted" panel — shows warrior their own submission timestamp ── */}
         {isWarrior &&
           activity.proof_url &&
           activity.activity_type !== "Mass Activity" && (
@@ -1559,6 +1451,7 @@ const { error: uploadError } =
                 <span className="text-lg">📄</span>
               </div>
 
+              {/* ── CHANGE 1: Timestamp chip shown to warrior ── */}
               {activity.completion_date && (
                 <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-black/20 border border-cyan-500/10">
                   <Clock size={13} className="text-cyan-400 shrink-0" />
@@ -1580,13 +1473,13 @@ const { error: uploadError } =
                 View Your Submitted Proof →
               </a>
             </div>
-        )}
+          )}
 
         {activity.activity_type ===
-  "Mass Activity" && (
+          "Mass Activity" && (
 
-  <div
-    className="
+            <div
+              className="
       mt-4
       rounded-xl
       border
@@ -1595,39 +1488,39 @@ const { error: uploadError } =
       p-4
       text-cyan-300
     "
-  >
+            >
 
-    <h3 className="font-bold mb-2">
-      Officer Managed Activity
-    </h3>
+              <h3 className="font-bold mb-2">
+                Officer Managed Activity
+              </h3>
 
-    <p className="text-sm">
-      Final proof and outreach
-      will be uploaded centrally
-      by officers after campaign
-      completion.
-    </p>
+              <p className="text-sm">
+                Final proof and outreach
+                will be uploaded centrally
+                by officers after campaign
+                completion.
+              </p>
 
-  </div>
+            </div>
 
-)}
+          )}
 
-{isOfficer && activity.activity_type === "Mass Activity" && (
+        {isOfficer && activity.activity_type === "Mass Activity" && (
 
-  activity.status !== "completed" ? (
+          activity.status !== "completed" ? (
 
-    <div className="bg-gradient-to-br from-cyan-500/5 to-blue-500/5 border border-cyan-500/20 rounded-xl p-3 mt-3">
+            <div className="bg-gradient-to-br from-cyan-500/5 to-blue-500/5 border border-cyan-500/20 rounded-xl p-3 mt-3">
 
-      <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 font-black mb-3">
-        Centralized Mass Activity
-      </p>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 font-black mb-3">
+                Centralized Mass Activity
+              </p>
 
-      <h3 className="text-lg font-black mb-3">
-        Officer Final Submission
-      </h3>
+              <h3 className="text-lg font-black mb-3">
+                Officer Final Submission
+              </h3>
 
-      <label
-        className="
+              <label
+                className="
           border
           border-cyan-500/20
           rounded-2xl
@@ -1642,45 +1535,45 @@ const { error: uploadError } =
           transition-all
           mb-4
         "
-      >
+              >
 
-        <div className="text-4xl mb-3">
-          📄
-        </div>
+                <div className="text-4xl mb-3">
+                  📄
+                </div>
 
-        <p className="font-bold text-white">
-          Click to Upload Final Proof
-        </p>
+                <p className="font-bold text-white">
+                  Click to Upload Final Proof
+                </p>
 
-        <p className="text-sm text-gray-400 mt-1">
-          PDF, Images, Docs
-        </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  PDF, Images, Docs
+                </p>
 
-        {proofFile && (
-          <p className="mt-3 text-cyan-400 text-sm font-bold">
-            {proofFile.name}
-          </p>
-        )}
+                {proofFile && (
+                  <p className="mt-3 text-cyan-400 text-sm font-bold">
+                    {proofFile.name}
+                  </p>
+                )}
 
-        <input
-          type="file"
-          hidden
-          onChange={(e) =>
-            setProofFile(e.target.files[0])
-          }
-        />
+                <input
+                  type="file"
+                  hidden
+                  onChange={(e) =>
+                    setProofFile(e.target.files[0])
+                  }
+                />
 
-      </label>
+              </label>
 
-      <textarea
-        placeholder="Enter Final Campaign Notes"
+              <textarea
+                placeholder="Enter Final Campaign Notes"
 
-        value={massRemarks}
-        onChange={(e) => {
-          setMassRemarks(e.target.value);
-        }}
+                value={massRemarks}
+                onChange={(e) => {
+                  setMassRemarks(e.target.value);
+                }}
 
-        className="
+                className="
           w-full
           bg-black/20
           border
@@ -1691,20 +1584,20 @@ const { error: uploadError } =
           mb-4
           h-28
         "
-      />
+              />
 
-      <input
-        type="number"
-        placeholder="Enter Final Outreach"
+              <input
+                type="number"
+                placeholder="Enter Final Outreach"
 
-        value={massAudienceCount}
-        onChange={(e) => {
-          setMassAudienceCount(
-            e.target.value
-          );
-        }}
+                value={massAudienceCount}
+                onChange={(e) => {
+                  setMassAudienceCount(
+                    e.target.value
+                  );
+                }}
 
-        className="
+                className="
           w-full
           bg-black/20
           border
@@ -1714,94 +1607,75 @@ const { error: uploadError } =
           text-white
           mb-4
         "
-      />
+              />
 
-      <button
+              <button
 
-        onClick={async () => {
+                onClick={async () => {
 
-          let proofUrl = "";
+                  let proofUrl = "";
 
-          if (proofFile) {
+                  if (proofFile) {
 
-            const fileName =
-              `${Date.now()}-${proofFile.name}`;
+                    const fileName =
+                      `${Date.now()}-${proofFile.name}`;
 
-            const { error: uploadError } =
-              await supabase.storage
-                .from("activity-proofs")
-                .upload(
-                  fileName,
-                  proofFile
-                );
+                    const { error: uploadError } =
+                      await supabase.storage
+                        .from("activity-proofs")
+                        .upload(
+                          fileName,
+                          proofFile
+                        );
 
-            if (uploadError) {
+                    if (uploadError) {
+                      toast.error("Proof upload failed");
+                      return;
+                    }
 
-              toast.error(
-                "Proof upload failed"
-              );
+                    const { data } =
+                      supabase.storage
+                        .from("activity-proofs")
+                        .getPublicUrl(fileName);
 
-              return;
+                    proofUrl = data?.publicUrl || "";
 
-            }
+                  }
 
-            const { data } =
-             supabase.storage
-            .from("activity-proofs")
-            .getPublicUrl(fileName);
+                  const { error } =
+                    await supabase
+                      .from("tasks")
+                      .update({
+                        status: "completed",
+                        proof_url:
+                          proofUrl || null,
+                        audience_count:
+                          Number(
+                            massAudienceCount
+                          ) || 0,
+                        remarks:
+                          massRemarks || "",
+                        coordinator_approved:
+                          true,
+                        // ── CHANGE 1: record finalization timestamp for mass activities ──
+                        completion_date:
+                          new Date().toISOString(),
+                      })
 
-        proofUrl = data?.publicUrl || "";
+                      .eq("id", activity.id);
 
-          }
+                  if (error) {
+                    toast.error("Submission failed");
+                    return;
+                  }
 
-          const { error } =
-            await supabase
-              .from("tasks")
-              .update({
+                  toast.success("Mass Activity Completed");
 
-                status: "completed",
+                  await fetchActivities(profile);
 
-                proof_url:
-                  proofUrl || null,
+                }}
 
-                audience_count:
-                  Number(
-                    massAudienceCount
-                  ) || 0,
-
-                remarks:
-                  massRemarks || "",
-
-                coordinator_approved:
-                  true,
-
-                // ── CHANGE 1: record submission/finalization timestamp ──
-                completion_date:
-                  new Date().toISOString(),
-
-              })
-
-          .eq("id", activity.id);
-
-          if (error) {
-
-            toast.error(
-              "Submission failed"
-            );
-
-            return;
-
-          }
-
-          toast.success(
-            "Mass Activity Completed"
-          );
-
-          await fetchActivities(profile);
-
-        }}
-
-        className="
+                className="
           w-full
           py-3
           rounded-xl
@@ -1811,44 +1685,44 @@ const { error: uploadError } =
           text-cyan-400
           font-black
         "
-      >
+              >
 
-        Finalize Mass Activity
+                Finalize Mass Activity
 
-      </button>
+              </button>
 
-    </div>
+            </div>
 
-  ) : (
+          ) : (
 
-    <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 mt-3">
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 mt-3">
 
-      <p className="text-emerald-400 font-black text-lg">
-        ✅ Mass Activity Completed
-      </p>
+              <p className="text-emerald-400 font-black text-lg">
+                ✅ Mass Activity Completed
+              </p>
 
-      <p className="text-gray-400 text-sm mt-2">
-        Final proof and outreach have already been submitted.
-      </p>
+              <p className="text-gray-400 text-sm mt-2">
+                Final proof and outreach have already been submitted.
+              </p>
 
-      {/* ── CHANGE 1: show when the mass activity was finalized ── */}
-      {activity.completion_date && (
-        <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-black/20 border border-emerald-500/10">
-          <Clock size={13} className="text-emerald-400 shrink-0" />
-          <div>
-            <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">Finalized On</p>
-            <p className="text-emerald-300 text-sm font-semibold">
-              {formatSubmissionDate(activity.completion_date)}
-            </p>
-          </div>
-        </div>
-      )}
+              {/* ── CHANGE 1: show when the mass activity was finalized ── */}
+              {activity.completion_date && (
+                <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-black/20 border border-emerald-500/10">
+                  <Clock size={13} className="text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">Finalized On</p>
+                    <p className="text-emerald-300 text-sm font-semibold">
+                      {formatSubmissionDate(activity.completion_date)}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-    </div>
+            </div>
 
-  )
+          )
 
-)}
+        )}
       </div>
     </motion.div>
   );

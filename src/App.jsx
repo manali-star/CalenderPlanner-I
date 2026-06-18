@@ -46,6 +46,8 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 
 import CollegeManagementPage from "./pages/admin/CollegeManagementPage";
+// change --- importing collegeReportPage (new file) from admin module
+import CollegeReportPage from "./pages/admin/CollegeReportPage";
 import { ensureUserProfile } from "./utils/authProfile";
 
 
@@ -493,7 +495,18 @@ if (
               <CollegeManagementPage />
             }
           />
-
+          {/* ── CHANGE: Per-college team + task report ── */}
+          <Route
+            path="/college-report/:collegeId"
+            element={
+              <ProtectedRoute
+                profile={profile}
+                allowedRoles={["admin"]}
+              >
+                <CollegeReportPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
 
       </MainLayout>
