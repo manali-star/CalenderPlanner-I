@@ -46,34 +46,6 @@ function TasksPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    init();
-  }, []);
-
-  const init = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        role,
-        college_id,
-        team_id
-      `)
-      .eq("id", user.id)
-      .maybeSingle();
-
-    setProfile(profileData);
-
-    fetchActivities(profileData);
-  };
-
   const fetchActivities = async (userProfile) => {
 
     const activeProfile =
@@ -249,6 +221,36 @@ function TasksPage() {
 
     }
   };
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          full_name,
+          role,
+          college_id,
+          team_id
+        `)
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setProfile(profileData);
+
+      fetchActivities(profileData);
+    };
+
+    loadProfile();
+    // Initial profile bootstrap should only run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredActivities = tasks.filter((activity) =>
     activity?.title
@@ -504,9 +506,6 @@ function ActivityCard({
 
   const [proofText, setProofText] =
     useState("");
-
-  const [uploading, setUploading] =
-    useState(false);
 
   const [proofFile, setProofFile] =
     useState(null);
