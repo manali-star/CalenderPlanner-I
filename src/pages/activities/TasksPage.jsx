@@ -382,6 +382,11 @@ function TasksPage() {
 
           const activities = Array.isArray(newActivity) ? newActivity : [newActivity];
 
+          if (activities.some((activity) => !activity.assigned_team_id)) {
+            toast.error("Please select a team for the activity");
+            return;
+          }
+
           const resolveCollegeId = async (activity) => {
             if (profile?.college_id) {
               return profile.college_id;
@@ -406,7 +411,7 @@ function TasksPage() {
 
               return {
                 title: activity.title,
-                activity_type: activity.activity_type,
+                activity_type: activity.activity_type || "Technical",
                 activity_date: activity.start_date,
                 due_date: activity.end_date || activity.start_date,
                 venue: activity.location,
