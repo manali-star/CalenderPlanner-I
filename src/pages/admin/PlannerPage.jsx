@@ -17,8 +17,6 @@ export default function PlannerPage() {
   const [teams, setTeams] = useState([]);
   const [warriors, setWarriors] = useState([]);
   const [pendingCoordinators, setPendingCoordinators] = useState([]);
-  const [collegeName, setCollegeName] = useState("");
-  const [allColleges, setAllColleges] = useState([]);
   const chartData = [
 
   {
@@ -362,31 +360,14 @@ const fetchPendingCoordinators = async () => {
 
 };
 
-const fetchColleges = async () => {
-
-  const { data, error } =
-    await supabase
-      .from("colleges")
-      .select("*")
-      .order("name");
-
-  if (!error) {
-
-    setAllColleges(data || []);
-
-  }
-
-};
-
 useEffect(() => {
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   fetchPlanners();
   fetchAllTasks();
   fetchTeams();
   fetchWarriors();
   fetchPendingCoordinators();
-  fetchColleges();
-
 }, []);
 
   const createPlanner = async () => {
@@ -898,107 +879,6 @@ useEffect(() => {
     ))}
 
   </div>
-  <div className="bg-[#0B1120] border border-cyan-500/20 rounded-3xl p-6 mt-10">
-
-  <h2 className="text-3xl font-black text-white mb-6">
-    College Management
-  </h2>
-
-  <div className="flex gap-4 mb-6">
-
-    <input
-      type="text"
-      placeholder="Enter College Name"
-
-      value={collegeName}
-
-      onChange={(e) =>
-        setCollegeName(e.target.value)
-      }
-
-      className="
-        flex-1
-        bg-[#111827]
-        border
-        border-cyan-500/20
-        rounded-2xl
-        px-5
-        py-4
-        text-white
-      "
-    />
-
-    <button
-
-      onClick={async () => {
-
-        if (!collegeName) return;
-
-        const { error } =
-          await supabase
-            .from("colleges")
-            .insert([
-              {
-                name: collegeName
-              }
-            ]);
-
-        if (!error) {
-
-          setCollegeName("");
-
-          fetchColleges();
-
-        }
-
-      }}
-
-      className="
-        px-6
-        py-4
-        rounded-2xl
-        bg-cyan-500
-        text-white
-        font-black
-      "
-    >
-
-      Add College
-
-    </button>
-
-  </div>
-
-  <div className="space-y-3">
-
-    {allColleges.map((college) => (
-
-      <div
-        key={college.id}
-        className="
-          bg-[#111827]
-          border
-          border-white/10
-          rounded-2xl
-          px-5
-          py-4
-          flex
-          items-center
-          justify-between
-        "
-      >
-
-        <p className="text-white font-bold">
-          {college.name}
-        </p>
-
-      </div>
-
-    ))}
-
-  </div>
-
-</div>
   <div className="bg-[#0B1120] border border-cyan-500/20 rounded-3xl p-6 mt-10">
 
   <h2 className="text-3xl font-black text-white mb-6">
